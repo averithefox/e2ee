@@ -1,0 +1,6 @@
+[submodule "backend/third_party/protobuf-c"]
+	path = backend/third_party/protobuf-c
+	url = https://github.com/averithefox/protobuf-c.git
+[submodule "backend/third_party/mongoose"]
+	path = backend/third_party/mongoose
+	url = https://github.com/cesanta/mongoose.git
