@@ -15,6 +15,7 @@ PROTOBUF_C__BEGIN_DECLS
 #endif
 
 
+typedef struct Identity Identity;
 
 
 /* --- enums --- */
@@ -22,14 +23,49 @@ PROTOBUF_C__BEGIN_DECLS
 
 /* --- messages --- */
 
+struct  Identity
+{
+  ProtobufCMessage base;
+  char *username;
+  ProtobufCBinaryData pub_enc_key;
+  ProtobufCBinaryData pub_sig_key;
+};
+#define IDENTITY__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&identity__descriptor) \
+, NULL, {0,NULL}, {0,NULL} }
+
+
+/* Identity methods */
+void   identity__init
+                     (Identity         *message);
+size_t identity__get_packed_size
+                     (const Identity   *message);
+size_t identity__pack
+                     (const Identity   *message,
+                      uint8_t             *out);
+size_t identity__pack_to_buffer
+                     (const Identity   *message,
+                      ProtobufCBuffer     *buffer);
+Identity *
+       identity__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   identity__free_unpacked
+                     (Identity *message,
+                      ProtobufCAllocator *allocator);
 /* --- per-message closures --- */
 
+typedef void (*Identity_Closure)
+                 (const Identity *message,
+                  void *closure_data);
 
 /* --- services --- */
 
 
 /* --- descriptors --- */
 
+extern const ProtobufCMessageDescriptor identity__descriptor;
 
 PROTOBUF_C__END_DECLS
 

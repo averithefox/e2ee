@@ -3,3 +3,115 @@
  * compiler version: 6.33.1
  * source: messages.proto
  * git: https://github.com/thesayyn/protoc-gen-ts */
+import * as pb_1 from "google-protobuf";
+export class Identity extends pb_1.Message {
+    #one_of_decls: number[][] = [];
+    constructor(data?: any[] | {
+        username: string;
+        pub_enc_key: Uint8Array;
+        pub_sig_key: Uint8Array;
+    }) {
+        super();
+        pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+        if (!Array.isArray(data) && typeof data == "object") {
+            this.username = data.username;
+            this.pub_enc_key = data.pub_enc_key;
+            this.pub_sig_key = data.pub_sig_key;
+        }
+    }
+    get username() {
+        return pb_1.Message.getField(this, 1) as string;
+    }
+    set username(value: string) {
+        pb_1.Message.setField(this, 1, value);
+    }
+    get has_username() {
+        return pb_1.Message.getField(this, 1) != null;
+    }
+    get pub_enc_key() {
+        return pb_1.Message.getField(this, 2) as Uint8Array;
+    }
+    set pub_enc_key(value: Uint8Array) {
+        pb_1.Message.setField(this, 2, value);
+    }
+    get has_pub_enc_key() {
+        return pb_1.Message.getField(this, 2) != null;
+    }
+    get pub_sig_key() {
+        return pb_1.Message.getField(this, 3) as Uint8Array;
+    }
+    set pub_sig_key(value: Uint8Array) {
+        pb_1.Message.setField(this, 3, value);
+    }
+    get has_pub_sig_key() {
+        return pb_1.Message.getField(this, 3) != null;
+    }
+    static fromObject(data: {
+        username?: string;
+        pub_enc_key?: Uint8Array;
+        pub_sig_key?: Uint8Array;
+    }): Identity {
+        const message = new Identity({
+            username: data.username,
+            pub_enc_key: data.pub_enc_key,
+            pub_sig_key: data.pub_sig_key
+        });
+        return message;
+    }
+    toObject() {
+        const data: {
+            username?: string;
+            pub_enc_key?: Uint8Array;
+            pub_sig_key?: Uint8Array;
+        } = {};
+        if (this.username != null) {
+            data.username = this.username;
+        }
+        if (this.pub_enc_key != null) {
+            data.pub_enc_key = this.pub_enc_key;
+        }
+        if (this.pub_sig_key != null) {
+            data.pub_sig_key = this.pub_sig_key;
+        }
+        return data;
+    }
+    serialize(): Uint8Array;
+    serialize(w: pb_1.BinaryWriter): void;
+    serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+        const writer = w || new pb_1.BinaryWriter();
+        if (this.has_username && this.username.length)
+            writer.writeString(1, this.username);
+        if (this.has_pub_enc_key && this.pub_enc_key.length)
+            writer.writeBytes(2, this.pub_enc_key);
+        if (this.has_pub_sig_key && this.pub_sig_key.length)
+            writer.writeBytes(3, this.pub_sig_key);
+        if (!w)
+            return writer.getResultBuffer();
+    }
+    static deserialize(bytes: Uint8Array | pb_1.BinaryReader): Identity {
+        const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new Identity();
+        while (reader.nextField()) {
+            if (reader.isEndGroup())
+                break;
+            switch (reader.getFieldNumber()) {
+                case 1:
+                    message.username = reader.readString();
+                    break;
+                case 2:
+                    message.pub_enc_key = reader.readBytes();
+                    break;
+                case 3:
+                    message.pub_sig_key = reader.readBytes();
+                    break;
+                default: reader.skipField();
+            }
+        }
+        return message;
+    }
+    serializeBinary(): Uint8Array {
+        return this.serialize();
+    }
+    static deserializeBinary(bytes: Uint8Array): Identity {
+        return Identity.deserialize(bytes);
+    }
+}

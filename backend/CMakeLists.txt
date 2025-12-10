@@ -22,7 +22,9 @@ add_executable(${CMAKE_PROJECT_NAME}
 
 add_subdirectory(third_party/protobuf-c/build-cmake)
 
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE protobuf-c sqlite3)
+find_package(OpenSSL REQUIRED)
+
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE protobuf-c sqlite3 OpenSSL::SSL OpenSSL::Crypto)
 
 target_include_directories(${CMAKE_PROJECT_NAME}
   PUBLIC

@@ -7,3 +7,112 @@
 #endif
 
 #include "messages.pb-c.h"
+void   identity__init
+                     (Identity         *message)
+{
+  static const Identity init_value = IDENTITY__INIT;
+  *message = init_value;
+}
+size_t identity__get_packed_size
+                     (const Identity *message)
+{
+  assert(message->base.descriptor == &identity__descriptor);
+  return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
+}
+size_t identity__pack
+                     (const Identity *message,
+                      uint8_t       *out)
+{
+  assert(message->base.descriptor == &identity__descriptor);
+  return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
+}
+size_t identity__pack_to_buffer
+                     (const Identity *message,
+                      ProtobufCBuffer *buffer)
+{
+  assert(message->base.descriptor == &identity__descriptor);
+  return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
+}
+Identity *
+       identity__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data)
+{
+  return (Identity *)
+     protobuf_c_message_unpack (&identity__descriptor,
+                                allocator, len, data);
+}
+void   identity__free_unpacked
+                     (Identity *message,
+                      ProtobufCAllocator *allocator)
+{
+  if(!message)
+    return;
+  assert(message->base.descriptor == &identity__descriptor);
+  protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
+}
+static const ProtobufCFieldDescriptor identity__field_descriptors[3] =
+{
+  {
+    "username",
+    1,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_STRING,
+    0,   /* quantifier_offset */
+    offsetof(Identity, username),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "pub_enc_key",
+    2,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_BYTES,
+    0,   /* quantifier_offset */
+    offsetof(Identity, pub_enc_key),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "pub_sig_key",
+    3,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_BYTES,
+    0,   /* quantifier_offset */
+    offsetof(Identity, pub_sig_key),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+};
+static const unsigned identity__field_indices_by_name[] = {
+  1,   /* field[1] = pub_enc_key */
+  2,   /* field[2] = pub_sig_key */
+  0,   /* field[0] = username */
+};
+static const ProtobufCIntRange identity__number_ranges[1 + 1] =
+{
+  { 1, 0 },
+  { 0, 3 }
+};
+const ProtobufCMessageDescriptor identity__descriptor =
+{
+  PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "Identity",
+  "Identity",
+  "Identity",
+  "",
+  sizeof(Identity),
+  3,
+  identity__field_descriptors,
+  identity__field_indices_by_name,
+  1,  identity__number_ranges,
+  (ProtobufCMessageInit) identity__init,
+  NULL,NULL,NULL    /* reserved[123] */
+};

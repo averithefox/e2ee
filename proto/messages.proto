@@ -1,1 +1,7 @@
-syntax = "proto3";
+syntax = "proto2";
+
+message Identity {
+  required string username = 1;
+  required bytes pub_enc_key = 2;
+  required bytes pub_sig_key = 3;
+}
