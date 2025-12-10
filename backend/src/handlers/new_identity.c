@@ -19,7 +19,7 @@ void handle_new_identity_request(struct mg_connection *c,
   EVP_PKEY *sig_key = NULL, *enc_key = NULL;
   sqlite3_stmt *stmt = NULL;
 
-  if (mg_strcmp(hm->method, mg_str("GET")) != 0) {
+  if (mg_strcmp(hm->method, mg_str("POST")) != 0) {
     status_code = 405;
     goto cleanup;
   }
