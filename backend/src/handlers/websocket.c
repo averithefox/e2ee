@@ -107,7 +107,7 @@ void handle_ws_challenge_response(struct mg_connection *c,
     goto err;
   }
 
-  if ((pkey = load_pub_enc_key_from_spki(buf, len)) == NULL) goto err;
+  if ((pkey = load_pub_sig_key_from_spki(buf, len)) == NULL) goto err;
 
   if (verify_signature((uint8_t *)c->data, sizeof c->data, msg->signature.data,
                        msg->signature.len, pkey) != 1) {

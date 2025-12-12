@@ -16,7 +16,6 @@
 void handle_new_identity_request(struct mg_connection *c,
                                  struct mg_http_message *hm) {
   int status_code = 418;
-  char *sig_buf = NULL;
   Messages__Identity *id_pb = NULL;
   EVP_PKEY *sig_key = NULL, *enc_key = NULL;
   sqlite3_stmt *stmt = NULL;
@@ -79,7 +78,6 @@ void handle_new_identity_request(struct mg_connection *c,
   status_code = sqlite3_changes(db) == 0 ? 409 : 201;
 
 err:
-  if (sig_buf) free(sig_buf);
   if (id_pb) messages__identity__free_unpacked(id_pb, NULL);
   if (sig_key) EVP_PKEY_free(sig_key);
   if (enc_key) EVP_PKEY_free(enc_key);
