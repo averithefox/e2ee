@@ -11,6 +11,8 @@ void handle_server_event(struct mg_connection *c, int ev, void *ev_data) {
     handle_ws_open(c, ev_data);
   } else if (ev == MG_EV_WS_MSG) {
     handle_ws_message(c, ev_data);
+  } else if (ev == MG_EV_CLOSE) {
+    if (c->fn_data) free(c->fn_data);
   }
 
   if (ev != MG_EV_HTTP_MSG) return;

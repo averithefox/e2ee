@@ -4,6 +4,10 @@
 
 #include "websocket.pb-c.h"
 
+struct ws_ctx {
+  uint8_t chlg[32];  // challenge bytes
+};
+
 void handle_ws_upgrade_request(struct mg_connection *c,
                                struct mg_http_message *hm);
 void handle_ws_open(struct mg_connection *c, struct mg_http_message *hm);

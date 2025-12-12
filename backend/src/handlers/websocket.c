@@ -16,15 +16,19 @@ void handle_ws_upgrade_request(struct mg_connection *c,
 void handle_ws_open(struct mg_connection *c, struct mg_http_message *hm) {
   (void)hm;
 
-  uint8_t challenge_bytes[32];
-  if (RAND_bytes(challenge_bytes, sizeof challenge_bytes) != 1) {
-    c->is_closing = 1;
-    return;
+  struct ws_ctx *ctx = calloc(1, sizeof(struct ws_ctx));
+  if (!ctx) {
+    fprintf(stderr, "[%s:%d] out of memory\n", __func__, __LINE__);
+    goto err;
   }
+  // freeing the ctx is taken care of by MG_EV_CLOSE handler
+  c->fn_data = ctx;
+
+  if (RAND_bytes(ctx->chlg, sizeof ctx->chlg) != 1) goto err;
 
   Websocket__Challenge ch = WEBSOCKET__CHALLENGE__INIT;
-  ch.challenge.data = challenge_bytes;
-  ch.challenge.len = sizeof challenge_bytes;
+  ch.challenge.data = ctx->chlg;
+  ch.challenge.len = sizeof ctx->chlg;
 
   Websocket__Envelope env = WEBSOCKET__ENVELOPE__INIT;
   env.payload_case = WEBSOCKET__ENVELOPE__PAYLOAD_CHALLENGE;
@@ -34,14 +38,15 @@ void handle_ws_open(struct mg_connection *c, struct mg_http_message *hm) {
   void *buf = malloc(n);
   if (!buf) {
     fprintf(stderr, "[%s:%d] out of memory\n", __func__, __LINE__);
-    c->is_closing = 1;
-    return;
+    goto err;
   }
 
   websocket__envelope__pack(&env, buf);
   mg_ws_send(c, buf, n, WEBSOCKET_OP_BINARY);
-  memcpy(c->data, challenge_bytes, sizeof c->data);
   free(buf);
+  return;
+err:
+  c->is_closing = 1;
 }
 
 void handle_ws_message(struct mg_connection *c, struct mg_ws_message *wm) {
@@ -109,7 +114,8 @@ void handle_ws_challenge_response(struct mg_connection *c,
 
   if ((pkey = load_pub_sig_key_from_spki(buf, len)) == NULL) goto err;
 
-  if (verify_signature((uint8_t *)c->data, sizeof c->data, msg->signature.data,
+  struct ws_ctx *ctx = c->fn_data;
+  if (verify_signature(ctx->chlg, sizeof ctx->chlg, msg->signature.data,
                        msg->signature.len, pkey) != 1) {
     fprintf(stderr, "[%s:%d] invalid signature\n", __func__, __LINE__);
     goto err;
