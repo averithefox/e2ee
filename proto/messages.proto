@@ -1,5 +1,9 @@
 syntax = "proto2";
 
+package messages;
+
+option optimize_for = SPEED;
+
 message Identity {
   required string username = 1;
   required bytes pub_enc_key = 2;

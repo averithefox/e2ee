@@ -27,27 +27,49 @@ export function genSigKeyPair() {
   );
 }
 
-export async function yeet(path: string, msg: Message) {
+/**
+ * @param privateKey CryptoKey for signing, null to disable signing and undefined to use the private key from localStorage
+ */
+export async function yeet(path: string, msg: Message, privateKey?: CryptoKey | null) {
   const bytes = msg.serializeBinary();
-  const [identity, keyStr] = [localStorage.getItem('handle'), localStorage.getItem('sig_priv')];
-  if (!identity || !keyStr) {
+  const identity = localStorage.getItem('handle');
+  const storedKey = localStorage.getItem('sig_priv');
+
+  if (privateKey === null) {
     return fetch(path, {
       method: 'POST',
       body: bytes
     });
   }
 
-  const jwk = JSON.parse(keyStr);
-  const privateKey = await crypto.subtle.importKey(
-    'jwk',
-    jwk,
-    {
-      name: 'RSASSA-PKCS1-v1_5',
-      hash: 'SHA-512'
-    },
-    false,
-    ['sign']
-  );
+  let signingKey: CryptoKey | undefined = privateKey;
+  if (signingKey === undefined) {
+    if (!storedKey) {
+      return fetch(path, {
+        method: 'POST',
+        body: bytes
+      });
+    }
+
+    const jwk = JSON.parse(storedKey);
+    signingKey = await crypto.subtle.importKey(
+      'jwk',
+      jwk,
+      {
+        name: 'RSASSA-PKCS1-v1_5',
+        hash: 'SHA-512'
+      },
+      false,
+      ['sign']
+    );
+  }
+
+  if (!signingKey) {
+    return fetch(path, {
+      method: 'POST',
+      body: bytes
+    });
+  }
 
   // See: verify_request() in backend/src/util.c
   const encoder = new TextEncoder();
@@ -64,15 +86,19 @@ export async function yeet(path: string, msg: Message) {
     offset += part.length;
   }
 
-  const sigBuf = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', privateKey, msgToSign);
+  const sigBuf = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', signingKey, msgToSign);
   const sigB64 = b64Encode(new Uint8Array(sigBuf));
+
+  const headers: Record<string, string> = {
+    'X-Signature': sigB64
+  };
+  if (identity) {
+    headers['X-Identity'] = identity;
+  }
 
   return fetch(path, {
     method: 'POST',
     body: bytes,
-    headers: {
-      'X-Identity': identity,
-      'X-Signature': sigB64
-    }
+    headers
   });
 }

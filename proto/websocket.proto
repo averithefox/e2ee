@@ -1,0 +1,21 @@
+syntax = "proto2";
+
+package websocket;
+
+option optimize_for = SPEED;
+
+message Challenge {
+  required bytes challenge = 1;
+}
+
+message ChallengeResponse {
+  required string handle = 1;
+  required bytes signature = 2;
+}
+
+message Envelope {
+  oneof payload {
+    Challenge challenge = 1;
+    ChallengeResponse challenge_response = 2;
+  }
+}

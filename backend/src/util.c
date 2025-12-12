@@ -95,16 +95,16 @@ err:
   return ret;
 }
 
-int verify_request(struct mg_http_message *hm) {
+int verify_request(struct mg_http_message *hm, EVP_PKEY *pkey) {
   int ret = -418;
   char *sig_buf = NULL;
   sqlite3_stmt *stmt = NULL;
-  EVP_PKEY *pkey = NULL;
   uint8_t *msg_buf = NULL;
+  int supplied_pkey = !!pkey;
 
   struct mg_str *id = mg_http_get_header(hm, "X-Identity");
   struct mg_str *sig_b64 = mg_http_get_header(hm, "X-Signature");
-  if (!id || !sig_b64) {
+  if ((!id && !pkey) || !sig_b64) {
     fprintf(stderr, "[%s:%d] missing required headers\n", __func__, __LINE__);
     ret = -400;
     goto err;
@@ -118,6 +118,8 @@ int verify_request(struct mg_http_message *hm) {
     ret = -400;
     goto err;
   }
+
+  if (pkey) goto check_signature;
 
   if (sqlite3_prepare_v3(db,
                          "select signing_key from identities where handle = ?;",
@@ -163,6 +165,9 @@ int verify_request(struct mg_http_message *hm) {
     goto err;
   }
 
+check_signature:
+  while (0);  // Label followed by a declaration is a C23 extension
+
   const struct iovec iov[] = {{hm->method.buf, hm->method.len},
                               {hm->uri.buf, hm->uri.len},
                               {hm->body.buf, hm->body.len}};
@@ -177,7 +182,7 @@ int verify_request(struct mg_http_message *hm) {
   if ((msg_buf = malloc(msg_len)) == NULL) {
     fprintf(stderr, "[%s:%d] out of memory\n", __func__, __LINE__);
     ret = -500;
-    return err;
+    goto err;
   }
 
   size_t i = 0;
@@ -197,7 +202,7 @@ int verify_request(struct mg_http_message *hm) {
 err:
   if (sig_buf) free(sig_buf);
   if (stmt) sqlite3_finalize(stmt);
-  if (pkey) EVP_PKEY_free(pkey);
+  if (!supplied_pkey && pkey) EVP_PKEY_free(pkey);
   if (msg_buf) free(msg_buf);
   return ret;
 }

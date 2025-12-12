@@ -1,5 +1,5 @@
 import { Identity } from 'generated/messages';
-import { genEncKeyPair, genSigKeyPair } from '../lib/crypto';
+import { genEncKeyPair, genSigKeyPair, yeet } from '../lib/crypto';
 
 async function func() {
   const handle = 'rawr_x3';
@@ -17,10 +17,7 @@ async function func() {
     pub_sig_key: new Uint8Array(pubSigKeyBuf)
   });
 
-  const res = await fetch('http://localhost:3000/api/new-identity', {
-    method: 'POST',
-    body: id.serialize()
-  });
+  const res = await yeet('http://localhost:3000/api/new-identity', id, sigKeyPair.privateKey);
 
   if (!res.ok) {
     console.error('Failed to register identity', res.status, res.statusText);
