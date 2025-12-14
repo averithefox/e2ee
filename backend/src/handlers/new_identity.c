@@ -34,18 +34,25 @@ void handle_new_identity_request(struct mg_connection *c,
   }
 
   if ((sig_key = load_pub_sig_key_from_spki(id_pb->pub_sig_key.data,
-                                            id_pb->pub_sig_key.len)) == NULL)
+                                            id_pb->pub_sig_key.len)) == NULL) {
+    fprintf(stderr, "[%s:%d] invalid public signing key\n", __func__, __LINE__);
+    status_code = 400;
     goto err;
+  }
 
-  int err = verify_request(hm, sig_key);
-  if (err < 0) {
-    status_code = -err;
+  int64_t id = verify_request(hm, sig_key);
+  if (id < 0) {
+    status_code = -id;
     goto err;
   }
 
   if ((enc_key = load_pub_enc_key_from_spki(id_pb->pub_enc_key.data,
-                                            id_pb->pub_enc_key.len)) == NULL)
+                                            id_pb->pub_enc_key.len)) == NULL) {
+    fprintf(stderr, "[%s:%d] invalid public encryption key\n", __func__,
+            __LINE__);
+    status_code = 400;
     goto err;
+  }
 
   if (sqlite3_prepare_v3(db,
                          "insert or ignore into identities (handle,"

@@ -19,9 +19,9 @@ void handle_get_identity_request(struct mg_connection *c,
   void *pb_buf = NULL;
   size_t pb_len = 0;
 
-  int err = verify_request(hm, NULL);
-  if (err < 0) {
-    status_code = -err;
+  int64_t id = verify_request(hm, NULL);
+  if (id < 0) {
+    status_code = -id;
     goto err;
   }
 
@@ -49,7 +49,7 @@ void handle_get_identity_request(struct mg_connection *c,
     goto err;
   }
 
-  err = sqlite3_step(stmt);
+  int err = sqlite3_step(stmt);
   if (err == SQLITE_DONE) {
     status_code = 404;
     goto err;

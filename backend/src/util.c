@@ -95,8 +95,8 @@ err:
   return ret;
 }
 
-int verify_request(struct mg_http_message *hm, EVP_PKEY *pkey) {
-  int ret = -418;
+int64_t verify_request(struct mg_http_message *hm, EVP_PKEY *pkey) {
+  int64_t ret = -418;
   char *sig_buf = NULL;
   sqlite3_stmt *stmt = NULL;
   uint8_t *msg_buf = NULL;
@@ -121,9 +121,9 @@ int verify_request(struct mg_http_message *hm, EVP_PKEY *pkey) {
 
   if (pkey) goto check_signature;
 
-  if (sqlite3_prepare_v3(db,
-                         "select signing_key from identities where handle = ?;",
-                         -1, 0, &stmt, NULL) < 0) {
+  if (sqlite3_prepare_v3(
+          db, "select id, signing_key from identities where handle = ?;", -1, 0,
+          &stmt, NULL) < 0) {
     fprintf(stderr, "[%s:%d] prepare failed: %s\n", __func__, __LINE__,
             sqlite3_errmsg(db));
     ret = -500;
@@ -151,8 +151,9 @@ int verify_request(struct mg_http_message *hm, EVP_PKEY *pkey) {
     goto err;
   }
 
-  const void *buf = sqlite3_column_blob(stmt, 0);
-  int len = sqlite3_column_bytes(stmt, 0);
+  ret = sqlite3_column_int64(stmt, 0);
+  const void *buf = sqlite3_column_blob(stmt, 1);
+  int len = sqlite3_column_bytes(stmt, 1);
 
   if (!buf || len <= 0) {
     fprintf(stderr, "[%s:%d] invalid public key buffer\n", __func__, __LINE__);
@@ -197,7 +198,7 @@ check_signature:
     goto err;
   }
 
-  ret = 0;
+  if (supplied_pkey) ret = 0;
 
 err:
   if (sig_buf) free(sig_buf);

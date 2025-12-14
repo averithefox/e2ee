@@ -16,7 +16,7 @@ void handle_ws_upgrade_request(struct mg_connection *c,
 void handle_ws_open(struct mg_connection *c, struct mg_http_message *hm) {
   (void)hm;
 
-  struct ws_ctx *ctx = calloc(1, sizeof(struct ws_ctx));
+  struct ws_ctx *ctx = malloc(sizeof(struct ws_ctx));
   if (!ctx) {
     fprintf(stderr, "[%s:%d] out of memory\n", __func__, __LINE__);
     goto err;
@@ -25,6 +25,7 @@ void handle_ws_open(struct mg_connection *c, struct mg_http_message *hm) {
   c->fn_data = ctx;
 
   if (RAND_bytes(ctx->chlg, sizeof ctx->chlg) != 1) goto err;
+  ctx->id = -1;
 
   Websocket__Challenge ch = WEBSOCKET__CHALLENGE__INIT;
   ch.challenge.data = ctx->chlg;
@@ -50,17 +51,32 @@ err:
 }
 
 void handle_ws_message(struct mg_connection *c, struct mg_ws_message *wm) {
-  if (wm->flags & ~WEBSOCKET_OP_BINARY) {
-    fprintf(stderr, "[%s:%d] invalid message flags\n", __func__, __LINE__);
-    return;
+  Websocket__Envelope *env = NULL;
+
+  uint8_t op = wm->flags & 0x0f;
+  if (op != WEBSOCKET_OP_BINARY) {
+    fprintf(stderr, "[%s:%d] invalid message opcode (flags=0x%02x op=%u)\n",
+            __func__, __LINE__, wm->flags, op);
+    goto cleanup;
   }
 
-  Websocket__Envelope *env =
+  struct ws_ctx *ctx = c->fn_data;
+  if (!ctx) {
+    fprintf(stderr, "[%s:%d] context missing\n", __func__, __LINE__);
+    goto err;
+  }
+
+  env =
       websocket__envelope__unpack(NULL, wm->data.len, (uint8_t *)wm->data.buf);
   if (!env) {
     fprintf(stderr, "[%s:%d] invalid message\n", __func__, __LINE__);
-    return;
+    if (ctx->id == -1) goto err;
+    goto cleanup;
   }
+
+  if (ctx->id == -1 &&
+      env->payload_case != WEBSOCKET__ENVELOPE__PAYLOAD_CHALLENGE_RESPONSE)
+    goto err;
 
   switch (env->payload_case) {
     case WEBSOCKET__ENVELOPE__PAYLOAD_CHALLENGE_RESPONSE:
@@ -70,7 +86,11 @@ void handle_ws_message(struct mg_connection *c, struct mg_ws_message *wm) {
       break;
   }
 
-  websocket__envelope__free_unpacked(env, NULL);
+  goto cleanup;
+err:
+  c->is_closing = 1;
+cleanup:
+  if (env) websocket__envelope__free_unpacked(env, NULL);
 }
 
 void handle_ws_challenge_response(struct mg_connection *c,
@@ -78,9 +98,9 @@ void handle_ws_challenge_response(struct mg_connection *c,
   sqlite3_stmt *stmt = NULL;
   EVP_PKEY *pkey = NULL;
 
-  if (sqlite3_prepare_v3(db,
-                         "select signing_key from identities where handle = ?;",
-                         -1, 0, &stmt, NULL) < 0) {
+  if (sqlite3_prepare_v3(
+          db, "select id, signing_key from identities where handle = ?;", -1, 0,
+          &stmt, NULL) < 0) {
     fprintf(stderr, "[%s:%d] prepare failed: %s\n", __func__, __LINE__,
             sqlite3_errmsg(db));
     goto err;
@@ -104,8 +124,9 @@ void handle_ws_challenge_response(struct mg_connection *c,
     goto err;
   }
 
-  const void *buf = sqlite3_column_blob(stmt, 0);
-  int len = sqlite3_column_bytes(stmt, 0);
+  int64_t identity_id = sqlite3_column_int64(stmt, 0);
+  const void *buf = sqlite3_column_blob(stmt, 1);
+  int len = sqlite3_column_bytes(stmt, 1);
 
   if (!buf || len <= 0) {
     fprintf(stderr, "[%s:%d] invalid public key buffer\n", __func__, __LINE__);
@@ -121,10 +142,21 @@ void handle_ws_challenge_response(struct mg_connection *c,
     goto err;
   }
 
+  ctx->id = identity_id;
+
   goto cleanup;
 err:
   c->is_draining = 1;
 cleanup:
   if (stmt) sqlite3_finalize(stmt);
   if (pkey) EVP_PKEY_free(pkey);
+}
+
+struct mg_connection *find_ws_conn_by_id(struct mg_mgr *mgr, int64_t id) {
+  for (struct mg_connection *c = mgr->conns; c; c = c->next) {
+    if (!c->is_websocket) continue;
+    struct ws_ctx *ctx = c->fn_data;
+    if (ctx && ctx->id == id) return c;
+  }
+  return NULL;
 }
