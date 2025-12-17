@@ -24,8 +24,8 @@ void handle_ws_open(struct mg_connection *c, struct mg_http_message *hm) {
   // freeing the ctx is taken care of by MG_EV_CLOSE handler
   c->fn_data = ctx;
 
-  if (RAND_bytes(ctx->nonce, sizeof ctx->nonce) != 1) goto err;
   ctx->id = -1;
+  if (RAND_bytes(ctx->nonce, sizeof ctx->nonce) != 1) goto err;
 
   Websocket__Challenge ch = WEBSOCKET__CHALLENGE__INIT;
   ch.nonce.data = ctx->nonce;
