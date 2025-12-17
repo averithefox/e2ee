@@ -8,37 +8,37 @@ export namespace websocket {
     export class Challenge extends pb_1.Message {
         #one_of_decls: number[][] = [];
         constructor(data?: any[] | {
-            challenge: Uint8Array;
+            nonce: Uint8Array;
         }) {
             super();
             pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
             if (!Array.isArray(data) && typeof data == "object") {
-                this.challenge = data.challenge;
+                this.nonce = data.nonce;
             }
         }
-        get challenge() {
+        get nonce() {
             return pb_1.Message.getField(this, 1) as Uint8Array;
         }
-        set challenge(value: Uint8Array) {
+        set nonce(value: Uint8Array) {
             pb_1.Message.setField(this, 1, value);
         }
-        get has_challenge() {
+        get has_nonce() {
             return pb_1.Message.getField(this, 1) != null;
         }
         static fromObject(data: {
-            challenge?: Uint8Array;
+            nonce?: Uint8Array;
         }): Challenge {
             const message = new Challenge({
-                challenge: data.challenge
+                nonce: data.nonce
             });
             return message;
         }
         toObject() {
             const data: {
-                challenge?: Uint8Array;
+                nonce?: Uint8Array;
             } = {};
-            if (this.challenge != null) {
-                data.challenge = this.challenge;
+            if (this.nonce != null) {
+                data.nonce = this.nonce;
             }
             return data;
         }
@@ -46,8 +46,8 @@ export namespace websocket {
         serialize(w: pb_1.BinaryWriter): void;
         serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
             const writer = w || new pb_1.BinaryWriter();
-            if (this.has_challenge && this.challenge.length)
-                writer.writeBytes(1, this.challenge);
+            if (this.has_nonce && this.nonce.length)
+                writer.writeBytes(1, this.nonce);
             if (!w)
                 return writer.getResultBuffer();
         }
@@ -58,7 +58,7 @@ export namespace websocket {
                     break;
                 switch (reader.getFieldNumber()) {
                     case 1:
-                        message.challenge = reader.readBytes();
+                        message.nonce = reader.readBytes();
                         break;
                     default: reader.skipField();
                 }

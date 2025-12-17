@@ -2,8 +2,8 @@
 
 #include <mongoose.h>
 
-#include "handlers/get_identity.h"
-#include "handlers/new_identity.h"
+#include "handlers/identity.h"
+#include "handlers/prekey_bundle.h"
 #include "handlers/websocket.h"
 
 void handle_server_event(struct mg_connection *c, int ev, void *ev_data) {
@@ -33,12 +33,13 @@ void handle_server_event(struct mg_connection *c, int ev, void *ev_data) {
     return;
   }
 
-  if (mg_strcmp(hm->uri, mg_str("/api/new-identity")) == 0) {
-    handle_new_identity_request(c, hm);
+  struct mg_str caps[2];
+  if (mg_strcmp(hm->uri, mg_str("/api/identity")) == 0) {
+    handle_identity_request(c, hm);
   } else if (mg_strcmp(hm->uri, mg_str("/api/ws")) == 0) {
     handle_ws_upgrade_request(c, hm);
-  } else if (mg_strcmp(hm->uri, mg_str("/api/get-identity")) == 0) {
-    handle_get_identity_request(c, hm);
+  } else if (mg_match(hm->uri, mg_str("/api/keys/*/bundle"), caps)) {
+    handle_prekey_bundle_request(c, hm, &caps[0]);
   } else {
     mg_http_reply(c, 404, "", "");
   }

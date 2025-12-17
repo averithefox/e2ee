@@ -7,6 +7,141 @@
 #endif
 
 #include "messages.pb-c.h"
+void   messages__signed_bytes__init
+                     (Messages__SignedBytes         *message)
+{
+  static const Messages__SignedBytes init_value = MESSAGES__SIGNED_BYTES__INIT;
+  *message = init_value;
+}
+size_t messages__signed_bytes__get_packed_size
+                     (const Messages__SignedBytes *message)
+{
+  assert(message->base.descriptor == &messages__signed_bytes__descriptor);
+  return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
+}
+size_t messages__signed_bytes__pack
+                     (const Messages__SignedBytes *message,
+                      uint8_t       *out)
+{
+  assert(message->base.descriptor == &messages__signed_bytes__descriptor);
+  return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
+}
+size_t messages__signed_bytes__pack_to_buffer
+                     (const Messages__SignedBytes *message,
+                      ProtobufCBuffer *buffer)
+{
+  assert(message->base.descriptor == &messages__signed_bytes__descriptor);
+  return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
+}
+Messages__SignedBytes *
+       messages__signed_bytes__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data)
+{
+  return (Messages__SignedBytes *)
+     protobuf_c_message_unpack (&messages__signed_bytes__descriptor,
+                                allocator, len, data);
+}
+void   messages__signed_bytes__free_unpacked
+                     (Messages__SignedBytes *message,
+                      ProtobufCAllocator *allocator)
+{
+  if(!message)
+    return;
+  assert(message->base.descriptor == &messages__signed_bytes__descriptor);
+  protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
+}
+void   messages__init_pqxdhkey_bundle__init
+                     (Messages__InitPQXDHKeyBundle         *message)
+{
+  static const Messages__InitPQXDHKeyBundle init_value = MESSAGES__INIT_PQXDHKEY_BUNDLE__INIT;
+  *message = init_value;
+}
+size_t messages__init_pqxdhkey_bundle__get_packed_size
+                     (const Messages__InitPQXDHKeyBundle *message)
+{
+  assert(message->base.descriptor == &messages__init_pqxdhkey_bundle__descriptor);
+  return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
+}
+size_t messages__init_pqxdhkey_bundle__pack
+                     (const Messages__InitPQXDHKeyBundle *message,
+                      uint8_t       *out)
+{
+  assert(message->base.descriptor == &messages__init_pqxdhkey_bundle__descriptor);
+  return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
+}
+size_t messages__init_pqxdhkey_bundle__pack_to_buffer
+                     (const Messages__InitPQXDHKeyBundle *message,
+                      ProtobufCBuffer *buffer)
+{
+  assert(message->base.descriptor == &messages__init_pqxdhkey_bundle__descriptor);
+  return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
+}
+Messages__InitPQXDHKeyBundle *
+       messages__init_pqxdhkey_bundle__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data)
+{
+  return (Messages__InitPQXDHKeyBundle *)
+     protobuf_c_message_unpack (&messages__init_pqxdhkey_bundle__descriptor,
+                                allocator, len, data);
+}
+void   messages__init_pqxdhkey_bundle__free_unpacked
+                     (Messages__InitPQXDHKeyBundle *message,
+                      ProtobufCAllocator *allocator)
+{
+  if(!message)
+    return;
+  assert(message->base.descriptor == &messages__init_pqxdhkey_bundle__descriptor);
+  protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
+}
+void   messages__pqxdhkey_bundle__init
+                     (Messages__PQXDHKeyBundle         *message)
+{
+  static const Messages__PQXDHKeyBundle init_value = MESSAGES__PQXDHKEY_BUNDLE__INIT;
+  *message = init_value;
+}
+size_t messages__pqxdhkey_bundle__get_packed_size
+                     (const Messages__PQXDHKeyBundle *message)
+{
+  assert(message->base.descriptor == &messages__pqxdhkey_bundle__descriptor);
+  return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
+}
+size_t messages__pqxdhkey_bundle__pack
+                     (const Messages__PQXDHKeyBundle *message,
+                      uint8_t       *out)
+{
+  assert(message->base.descriptor == &messages__pqxdhkey_bundle__descriptor);
+  return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
+}
+size_t messages__pqxdhkey_bundle__pack_to_buffer
+                     (const Messages__PQXDHKeyBundle *message,
+                      ProtobufCBuffer *buffer)
+{
+  assert(message->base.descriptor == &messages__pqxdhkey_bundle__descriptor);
+  return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
+}
+Messages__PQXDHKeyBundle *
+       messages__pqxdhkey_bundle__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data)
+{
+  return (Messages__PQXDHKeyBundle *)
+     protobuf_c_message_unpack (&messages__pqxdhkey_bundle__descriptor,
+                                allocator, len, data);
+}
+void   messages__pqxdhkey_bundle__free_unpacked
+                     (Messages__PQXDHKeyBundle *message,
+                      ProtobufCAllocator *allocator)
+{
+  if(!message)
+    return;
+  assert(message->base.descriptor == &messages__pqxdhkey_bundle__descriptor);
+  protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
+}
 void   messages__identity__init
                      (Messages__Identity         *message)
 {
@@ -52,54 +187,259 @@ void   messages__identity__free_unpacked
   assert(message->base.descriptor == &messages__identity__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
-static const ProtobufCFieldDescriptor messages__identity__field_descriptors[3] =
+static const ProtobufCFieldDescriptor messages__signed_bytes__field_descriptors[2] =
 {
   {
-    "username",
+    "bytes",
     1,
     PROTOBUF_C_LABEL_REQUIRED,
-    PROTOBUF_C_TYPE_STRING,
+    PROTOBUF_C_TYPE_BYTES,
     0,   /* quantifier_offset */
-    offsetof(Messages__Identity, username),
+    offsetof(Messages__SignedBytes, bytes),
     NULL,
     NULL,
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "pub_enc_key",
+    "sig",
     2,
     PROTOBUF_C_LABEL_REQUIRED,
     PROTOBUF_C_TYPE_BYTES,
     0,   /* quantifier_offset */
-    offsetof(Messages__Identity, pub_enc_key),
+    offsetof(Messages__SignedBytes, sig),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+};
+static const unsigned messages__signed_bytes__field_indices_by_name[] = {
+  0,   /* field[0] = bytes */
+  1,   /* field[1] = sig */
+};
+static const ProtobufCIntRange messages__signed_bytes__number_ranges[1 + 1] =
+{
+  { 1, 0 },
+  { 0, 2 }
+};
+const ProtobufCMessageDescriptor messages__signed_bytes__descriptor =
+{
+  PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "messages.SignedBytes",
+  "SignedBytes",
+  "Messages__SignedBytes",
+  "messages",
+  sizeof(Messages__SignedBytes),
+  2,
+  messages__signed_bytes__field_descriptors,
+  messages__signed_bytes__field_indices_by_name,
+  1,  messages__signed_bytes__number_ranges,
+  (ProtobufCMessageInit) messages__signed_bytes__init,
+  NULL,NULL,NULL    /* reserved[123] */
+};
+static const ProtobufCFieldDescriptor messages__init_pqxdhkey_bundle__field_descriptors[5] =
+{
+  {
+    "id_key",
+    1,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_BYTES,
+    0,   /* quantifier_offset */
+    offsetof(Messages__InitPQXDHKeyBundle, id_key),
     NULL,
     NULL,
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "pub_sig_key",
+    "prekey",
+    2,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_MESSAGE,
+    0,   /* quantifier_offset */
+    offsetof(Messages__InitPQXDHKeyBundle, prekey),
+    &messages__signed_bytes__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "pqkem_prekey",
     3,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_MESSAGE,
+    0,   /* quantifier_offset */
+    offsetof(Messages__InitPQXDHKeyBundle, pqkem_prekey),
+    &messages__signed_bytes__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "one_time_prekeys",
+    4,
+    PROTOBUF_C_LABEL_REPEATED,
+    PROTOBUF_C_TYPE_BYTES,
+    offsetof(Messages__InitPQXDHKeyBundle, n_one_time_prekeys),
+    offsetof(Messages__InitPQXDHKeyBundle, one_time_prekeys),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "one_time_pqkem_prekeys",
+    5,
+    PROTOBUF_C_LABEL_REPEATED,
+    PROTOBUF_C_TYPE_MESSAGE,
+    offsetof(Messages__InitPQXDHKeyBundle, n_one_time_pqkem_prekeys),
+    offsetof(Messages__InitPQXDHKeyBundle, one_time_pqkem_prekeys),
+    &messages__signed_bytes__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+};
+static const unsigned messages__init_pqxdhkey_bundle__field_indices_by_name[] = {
+  0,   /* field[0] = id_key */
+  4,   /* field[4] = one_time_pqkem_prekeys */
+  3,   /* field[3] = one_time_prekeys */
+  2,   /* field[2] = pqkem_prekey */
+  1,   /* field[1] = prekey */
+};
+static const ProtobufCIntRange messages__init_pqxdhkey_bundle__number_ranges[1 + 1] =
+{
+  { 1, 0 },
+  { 0, 5 }
+};
+const ProtobufCMessageDescriptor messages__init_pqxdhkey_bundle__descriptor =
+{
+  PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "messages.InitPQXDHKeyBundle",
+  "InitPQXDHKeyBundle",
+  "Messages__InitPQXDHKeyBundle",
+  "messages",
+  sizeof(Messages__InitPQXDHKeyBundle),
+  5,
+  messages__init_pqxdhkey_bundle__field_descriptors,
+  messages__init_pqxdhkey_bundle__field_indices_by_name,
+  1,  messages__init_pqxdhkey_bundle__number_ranges,
+  (ProtobufCMessageInit) messages__init_pqxdhkey_bundle__init,
+  NULL,NULL,NULL    /* reserved[123] */
+};
+static const ProtobufCFieldDescriptor messages__pqxdhkey_bundle__field_descriptors[4] =
+{
+  {
+    "id_key",
+    1,
     PROTOBUF_C_LABEL_REQUIRED,
     PROTOBUF_C_TYPE_BYTES,
     0,   /* quantifier_offset */
-    offsetof(Messages__Identity, pub_sig_key),
+    offsetof(Messages__PQXDHKeyBundle, id_key),
     NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "prekey",
+    2,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_MESSAGE,
+    0,   /* quantifier_offset */
+    offsetof(Messages__PQXDHKeyBundle, prekey),
+    &messages__signed_bytes__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "pqkem_prekey",
+    3,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_MESSAGE,
+    0,   /* quantifier_offset */
+    offsetof(Messages__PQXDHKeyBundle, pqkem_prekey),
+    &messages__signed_bytes__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "one_time_prekey",
+    4,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_BYTES,
+    offsetof(Messages__PQXDHKeyBundle, has_one_time_prekey),
+    offsetof(Messages__PQXDHKeyBundle, one_time_prekey),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+};
+static const unsigned messages__pqxdhkey_bundle__field_indices_by_name[] = {
+  0,   /* field[0] = id_key */
+  3,   /* field[3] = one_time_prekey */
+  2,   /* field[2] = pqkem_prekey */
+  1,   /* field[1] = prekey */
+};
+static const ProtobufCIntRange messages__pqxdhkey_bundle__number_ranges[1 + 1] =
+{
+  { 1, 0 },
+  { 0, 4 }
+};
+const ProtobufCMessageDescriptor messages__pqxdhkey_bundle__descriptor =
+{
+  PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "messages.PQXDHKeyBundle",
+  "PQXDHKeyBundle",
+  "Messages__PQXDHKeyBundle",
+  "messages",
+  sizeof(Messages__PQXDHKeyBundle),
+  4,
+  messages__pqxdhkey_bundle__field_descriptors,
+  messages__pqxdhkey_bundle__field_indices_by_name,
+  1,  messages__pqxdhkey_bundle__number_ranges,
+  (ProtobufCMessageInit) messages__pqxdhkey_bundle__init,
+  NULL,NULL,NULL    /* reserved[123] */
+};
+static const ProtobufCFieldDescriptor messages__identity__field_descriptors[2] =
+{
+  {
+    "handle",
+    1,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_STRING,
+    0,   /* quantifier_offset */
+    offsetof(Messages__Identity, handle),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "key_bundle",
+    2,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_MESSAGE,
+    0,   /* quantifier_offset */
+    offsetof(Messages__Identity, key_bundle),
+    &messages__init_pqxdhkey_bundle__descriptor,
     NULL,
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
 };
 static const unsigned messages__identity__field_indices_by_name[] = {
-  1,   /* field[1] = pub_enc_key */
-  2,   /* field[2] = pub_sig_key */
-  0,   /* field[0] = username */
+  0,   /* field[0] = handle */
+  1,   /* field[1] = key_bundle */
 };
 static const ProtobufCIntRange messages__identity__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 3 }
+  { 0, 2 }
 };
 const ProtobufCMessageDescriptor messages__identity__descriptor =
 {
@@ -109,7 +449,7 @@ const ProtobufCMessageDescriptor messages__identity__descriptor =
   "Messages__Identity",
   "messages",
   sizeof(Messages__Identity),
-  3,
+  2,
   messages__identity__field_descriptors,
   messages__identity__field_indices_by_name,
   1,  messages__identity__number_ranges,

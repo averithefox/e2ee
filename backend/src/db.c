@@ -8,29 +8,26 @@ static const char *s_sql =
   "create table if not exists identities("
     "id integer primary key autoincrement,"
     "handle text not null unique,"
-    "encryption_key blob not null,"
-    "signing_key blob not null"
+    "ik blob not null," // identity key
+    "spk blob not null," // signed prekey
+    "spk_sig blob not null,"
+    "pqspk blob not null," // last-resort post-quantum signed prekey
+    "pqspk_sig blob not null"
   ");"
 
-  "create table if not exists conversations("
-    "id integer primary key autoincrement"
-  ");"
-
-  "create table if not exists participants("
-    "conversation_id integer not null,"
-    "identity_id integer not null,"
-    "primary key (conversation_id,identity_id),"
-    "foreign key (conversation_id) references conversations(id) on delete cascade,"
-    "foreign key (identity_id) references identities(id) on delete cascade"
-  ");"
-
-  "create table if not exists messages("
+  "create table if not exists opks(" // one-time prekeys
     "id integer primary key autoincrement,"
-    "conversation_id integer not null,"
-    "author integer not null,"
-    "ciphertext blob not null,"
-    "foreign key (conversation_id) references conversations(id) on delete cascade,"
-    "foreign key (author) references identities(id) on delete cascade"
+    "for integer not null,"
+    "bytes blob not null,"
+    "foreign key (for) references identities(id) on delete cascade"
+  ");"
+
+  "create table if not exists pqopks(" // signed one-time pqkem prekeys
+    "id integer primary key autoincrement,"
+    "for integer not null,"
+    "bytes blob not null,"
+    "sig blob not null, "
+    "foreign key (for) references identities(id) on delete cascade"
   ");";
 // clang-format on
 

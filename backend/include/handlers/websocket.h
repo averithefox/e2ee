@@ -5,7 +5,7 @@
 #include "websocket.pb-c.h"
 
 struct ws_ctx {
-  uint8_t chlg[32];  // challenge bytes
+  uint8_t nonce[32];  // challenge bytes
   int64_t id;
 };
 

@@ -28,7 +28,7 @@ typedef struct Websocket__Envelope Websocket__Envelope;
 struct  Websocket__Challenge
 {
   ProtobufCMessage base;
-  ProtobufCBinaryData challenge;
+  ProtobufCBinaryData nonce;
 };
 #define WEBSOCKET__CHALLENGE__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&websocket__challenge__descriptor) \

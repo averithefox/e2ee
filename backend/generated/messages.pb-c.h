@@ -15,6 +15,9 @@ PROTOBUF_C__BEGIN_DECLS
 #endif
 
 
+typedef struct Messages__SignedBytes Messages__SignedBytes;
+typedef struct Messages__InitPQXDHKeyBundle Messages__InitPQXDHKeyBundle;
+typedef struct Messages__PQXDHKeyBundle Messages__PQXDHKeyBundle;
 typedef struct Messages__Identity Messages__Identity;
 
 
@@ -23,18 +26,115 @@ typedef struct Messages__Identity Messages__Identity;
 
 /* --- messages --- */
 
+struct  Messages__SignedBytes
+{
+  ProtobufCMessage base;
+  ProtobufCBinaryData bytes;
+  ProtobufCBinaryData sig;
+};
+#define MESSAGES__SIGNED_BYTES__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&messages__signed_bytes__descriptor) \
+, {0,NULL}, {0,NULL} }
+
+
+struct  Messages__InitPQXDHKeyBundle
+{
+  ProtobufCMessage base;
+  ProtobufCBinaryData id_key;
+  Messages__SignedBytes *prekey;
+  Messages__SignedBytes *pqkem_prekey;
+  size_t n_one_time_prekeys;
+  ProtobufCBinaryData *one_time_prekeys;
+  size_t n_one_time_pqkem_prekeys;
+  Messages__SignedBytes **one_time_pqkem_prekeys;
+};
+#define MESSAGES__INIT_PQXDHKEY_BUNDLE__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&messages__init_pqxdhkey_bundle__descriptor) \
+, {0,NULL}, NULL, NULL, 0,NULL, 0,NULL }
+
+
+struct  Messages__PQXDHKeyBundle
+{
+  ProtobufCMessage base;
+  ProtobufCBinaryData id_key;
+  Messages__SignedBytes *prekey;
+  Messages__SignedBytes *pqkem_prekey;
+  protobuf_c_boolean has_one_time_prekey;
+  ProtobufCBinaryData one_time_prekey;
+};
+#define MESSAGES__PQXDHKEY_BUNDLE__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&messages__pqxdhkey_bundle__descriptor) \
+, {0,NULL}, NULL, NULL, 0, {0,NULL} }
+
+
 struct  Messages__Identity
 {
   ProtobufCMessage base;
-  char *username;
-  ProtobufCBinaryData pub_enc_key;
-  ProtobufCBinaryData pub_sig_key;
+  char *handle;
+  Messages__InitPQXDHKeyBundle *key_bundle;
 };
 #define MESSAGES__IDENTITY__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&messages__identity__descriptor) \
-, NULL, {0,NULL}, {0,NULL} }
+, NULL, NULL }
 
 
+/* Messages__SignedBytes methods */
+void   messages__signed_bytes__init
+                     (Messages__SignedBytes         *message);
+size_t messages__signed_bytes__get_packed_size
+                     (const Messages__SignedBytes   *message);
+size_t messages__signed_bytes__pack
+                     (const Messages__SignedBytes   *message,
+                      uint8_t             *out);
+size_t messages__signed_bytes__pack_to_buffer
+                     (const Messages__SignedBytes   *message,
+                      ProtobufCBuffer     *buffer);
+Messages__SignedBytes *
+       messages__signed_bytes__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   messages__signed_bytes__free_unpacked
+                     (Messages__SignedBytes *message,
+                      ProtobufCAllocator *allocator);
+/* Messages__InitPQXDHKeyBundle methods */
+void   messages__init_pqxdhkey_bundle__init
+                     (Messages__InitPQXDHKeyBundle         *message);
+size_t messages__init_pqxdhkey_bundle__get_packed_size
+                     (const Messages__InitPQXDHKeyBundle   *message);
+size_t messages__init_pqxdhkey_bundle__pack
+                     (const Messages__InitPQXDHKeyBundle   *message,
+                      uint8_t             *out);
+size_t messages__init_pqxdhkey_bundle__pack_to_buffer
+                     (const Messages__InitPQXDHKeyBundle   *message,
+                      ProtobufCBuffer     *buffer);
+Messages__InitPQXDHKeyBundle *
+       messages__init_pqxdhkey_bundle__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   messages__init_pqxdhkey_bundle__free_unpacked
+                     (Messages__InitPQXDHKeyBundle *message,
+                      ProtobufCAllocator *allocator);
+/* Messages__PQXDHKeyBundle methods */
+void   messages__pqxdhkey_bundle__init
+                     (Messages__PQXDHKeyBundle         *message);
+size_t messages__pqxdhkey_bundle__get_packed_size
+                     (const Messages__PQXDHKeyBundle   *message);
+size_t messages__pqxdhkey_bundle__pack
+                     (const Messages__PQXDHKeyBundle   *message,
+                      uint8_t             *out);
+size_t messages__pqxdhkey_bundle__pack_to_buffer
+                     (const Messages__PQXDHKeyBundle   *message,
+                      ProtobufCBuffer     *buffer);
+Messages__PQXDHKeyBundle *
+       messages__pqxdhkey_bundle__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   messages__pqxdhkey_bundle__free_unpacked
+                     (Messages__PQXDHKeyBundle *message,
+                      ProtobufCAllocator *allocator);
 /* Messages__Identity methods */
 void   messages__identity__init
                      (Messages__Identity         *message);
@@ -56,6 +156,15 @@ void   messages__identity__free_unpacked
                       ProtobufCAllocator *allocator);
 /* --- per-message closures --- */
 
+typedef void (*Messages__SignedBytes_Closure)
+                 (const Messages__SignedBytes *message,
+                  void *closure_data);
+typedef void (*Messages__InitPQXDHKeyBundle_Closure)
+                 (const Messages__InitPQXDHKeyBundle *message,
+                  void *closure_data);
+typedef void (*Messages__PQXDHKeyBundle_Closure)
+                 (const Messages__PQXDHKeyBundle *message,
+                  void *closure_data);
 typedef void (*Messages__Identity_Closure)
                  (const Messages__Identity *message,
                   void *closure_data);
@@ -65,6 +174,9 @@ typedef void (*Messages__Identity_Closure)
 
 /* --- descriptors --- */
 
+extern const ProtobufCMessageDescriptor messages__signed_bytes__descriptor;
+extern const ProtobufCMessageDescriptor messages__init_pqxdhkey_bundle__descriptor;
+extern const ProtobufCMessageDescriptor messages__pqxdhkey_bundle__descriptor;
 extern const ProtobufCMessageDescriptor messages__identity__descriptor;
 
 PROTOBUF_C__END_DECLS

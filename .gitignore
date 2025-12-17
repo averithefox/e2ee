@@ -1,5 +1,8 @@
 .DS_Store
 node_modules/
 build/
+target/
 /data/
 __dev__/
+rs-crypto/include/
+.cache/

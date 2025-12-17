@@ -145,12 +145,12 @@ void   websocket__envelope__free_unpacked
 static const ProtobufCFieldDescriptor websocket__challenge__field_descriptors[1] =
 {
   {
-    "challenge",
+    "nonce",
     1,
     PROTOBUF_C_LABEL_REQUIRED,
     PROTOBUF_C_TYPE_BYTES,
     0,   /* quantifier_offset */
-    offsetof(Websocket__Challenge, challenge),
+    offsetof(Websocket__Challenge, nonce),
     NULL,
     NULL,
     0,             /* flags */
@@ -158,7 +158,7 @@ static const ProtobufCFieldDescriptor websocket__challenge__field_descriptors[1]
   },
 };
 static const unsigned websocket__challenge__field_indices_by_name[] = {
-  0,   /* field[0] = challenge */
+  0,   /* field[0] = nonce */
 };
 static const ProtobufCIntRange websocket__challenge__number_ranges[1 + 1] =
 {

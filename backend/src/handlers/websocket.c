@@ -1,11 +1,11 @@
 #include "handlers/websocket.h"
 
+#include <crypto.h>
 #include <openssl/rand.h>
 #include <sqlite3.h>
 
 #include "db.h"
 #include "mongoose.h"
-#include "util.h"
 #include "websocket.pb-c.h"
 
 void handle_ws_upgrade_request(struct mg_connection *c,
@@ -24,12 +24,12 @@ void handle_ws_open(struct mg_connection *c, struct mg_http_message *hm) {
   // freeing the ctx is taken care of by MG_EV_CLOSE handler
   c->fn_data = ctx;
 
-  if (RAND_bytes(ctx->chlg, sizeof ctx->chlg) != 1) goto err;
+  if (RAND_bytes(ctx->nonce, sizeof ctx->nonce) != 1) goto err;
   ctx->id = -1;
 
   Websocket__Challenge ch = WEBSOCKET__CHALLENGE__INIT;
-  ch.challenge.data = ctx->chlg;
-  ch.challenge.len = sizeof ctx->chlg;
+  ch.nonce.data = ctx->nonce;
+  ch.nonce.len = sizeof ctx->nonce;
 
   Websocket__Envelope env = WEBSOCKET__ENVELOPE__INIT;
   env.payload_case = WEBSOCKET__ENVELOPE__PAYLOAD_CHALLENGE;
@@ -98,9 +98,13 @@ void handle_ws_challenge_response(struct mg_connection *c,
   sqlite3_stmt *stmt = NULL;
   EVP_PKEY *pkey = NULL;
 
-  if (sqlite3_prepare_v3(
-          db, "select id, signing_key from identities where handle = ?;", -1, 0,
-          &stmt, NULL) < 0) {
+  if (msg->signature.len != XEDDSA_SIGNATURE_LENGTH) {
+    fprintf(stderr, "[%s:%d] invalid signature\n", __func__, __LINE__);
+    goto err;
+  }
+
+  if (sqlite3_prepare_v3(db, "select id, ik from identities where handle = ?;",
+                         -1, 0, &stmt, NULL) < 0) {
     fprintf(stderr, "[%s:%d] prepare failed: %s\n", __func__, __LINE__,
             sqlite3_errmsg(db));
     goto err;
@@ -113,36 +117,37 @@ void handle_ws_challenge_response(struct mg_connection *c,
   }
 
   int err = sqlite3_step(stmt);
-  if (err == SQLITE_DONE) {
-    fprintf(stderr, "[%s:%d] unknown identity\n", __func__, __LINE__);
-    goto err;
+  switch (err) {
+    case SQLITE_ROW:
+      break;
+    case SQLITE_DONE: {
+      fprintf(stderr, "[%s:%d] unknown identity\n", __func__, __LINE__);
+      goto err;
+    }
+    default: {
+      fprintf(stderr, "[%s:%d] step failed: %s\n", __func__, __LINE__,
+              sqlite3_errmsg(db));
+      goto err;
+    }
   }
 
-  if (err != SQLITE_ROW) {
-    fprintf(stderr, "[%s:%d] step failed: %s\n", __func__, __LINE__,
-            sqlite3_errmsg(db));
-    goto err;
-  }
+  int64_t id = sqlite3_column_int64(stmt, 0);
+  const void *pk_buf = sqlite3_column_blob(stmt, 1);
+  int pk_len = sqlite3_column_bytes(stmt, 1);
 
-  int64_t identity_id = sqlite3_column_int64(stmt, 0);
-  const void *buf = sqlite3_column_blob(stmt, 1);
-  int len = sqlite3_column_bytes(stmt, 1);
-
-  if (!buf || len <= 0) {
+  if (!pk_buf || pk_len != CURVE25519_PUBLIC_KEY_LENGTH) {
     fprintf(stderr, "[%s:%d] invalid public key buffer\n", __func__, __LINE__);
     goto err;
   }
 
-  if ((pkey = load_pub_sig_key_from_spki(buf, len)) == NULL) goto err;
-
   struct ws_ctx *ctx = c->fn_data;
-  if (verify_signature(ctx->chlg, sizeof ctx->chlg, msg->signature.data,
-                       msg->signature.len, pkey) != 1) {
+  if (!xeddsa_verify(pk_buf, ctx->nonce, sizeof ctx->nonce,
+                     msg->signature.data)) {
     fprintf(stderr, "[%s:%d] invalid signature\n", __func__, __LINE__);
     goto err;
   }
 
-  ctx->id = identity_id;
+  ctx->id = id;
 
   goto cleanup;
 err:

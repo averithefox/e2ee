@@ -5,74 +5,57 @@
  * git: https://github.com/thesayyn/protoc-gen-ts */
 import * as pb_1 from "google-protobuf";
 export namespace messages {
-    export class Identity extends pb_1.Message {
+    export class SignedBytes extends pb_1.Message {
         #one_of_decls: number[][] = [];
         constructor(data?: any[] | {
-            username: string;
-            pub_enc_key: Uint8Array;
-            pub_sig_key: Uint8Array;
+            bytes: Uint8Array;
+            sig: Uint8Array;
         }) {
             super();
             pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
             if (!Array.isArray(data) && typeof data == "object") {
-                this.username = data.username;
-                this.pub_enc_key = data.pub_enc_key;
-                this.pub_sig_key = data.pub_sig_key;
+                this.bytes = data.bytes;
+                this.sig = data.sig;
             }
         }
-        get username() {
-            return pb_1.Message.getField(this, 1) as string;
+        get bytes() {
+            return pb_1.Message.getField(this, 1) as Uint8Array;
         }
-        set username(value: string) {
+        set bytes(value: Uint8Array) {
             pb_1.Message.setField(this, 1, value);
         }
-        get has_username() {
+        get has_bytes() {
             return pb_1.Message.getField(this, 1) != null;
         }
-        get pub_enc_key() {
+        get sig() {
             return pb_1.Message.getField(this, 2) as Uint8Array;
         }
-        set pub_enc_key(value: Uint8Array) {
+        set sig(value: Uint8Array) {
             pb_1.Message.setField(this, 2, value);
         }
-        get has_pub_enc_key() {
+        get has_sig() {
             return pb_1.Message.getField(this, 2) != null;
         }
-        get pub_sig_key() {
-            return pb_1.Message.getField(this, 3) as Uint8Array;
-        }
-        set pub_sig_key(value: Uint8Array) {
-            pb_1.Message.setField(this, 3, value);
-        }
-        get has_pub_sig_key() {
-            return pb_1.Message.getField(this, 3) != null;
-        }
         static fromObject(data: {
-            username?: string;
-            pub_enc_key?: Uint8Array;
-            pub_sig_key?: Uint8Array;
-        }): Identity {
-            const message = new Identity({
-                username: data.username,
-                pub_enc_key: data.pub_enc_key,
-                pub_sig_key: data.pub_sig_key
+            bytes?: Uint8Array;
+            sig?: Uint8Array;
+        }): SignedBytes {
+            const message = new SignedBytes({
+                bytes: data.bytes,
+                sig: data.sig
             });
             return message;
         }
         toObject() {
             const data: {
-                username?: string;
-                pub_enc_key?: Uint8Array;
-                pub_sig_key?: Uint8Array;
+                bytes?: Uint8Array;
+                sig?: Uint8Array;
             } = {};
-            if (this.username != null) {
-                data.username = this.username;
+            if (this.bytes != null) {
+                data.bytes = this.bytes;
             }
-            if (this.pub_enc_key != null) {
-                data.pub_enc_key = this.pub_enc_key;
-            }
-            if (this.pub_sig_key != null) {
-                data.pub_sig_key = this.pub_sig_key;
+            if (this.sig != null) {
+                data.sig = this.sig;
             }
             return data;
         }
@@ -80,12 +63,384 @@ export namespace messages {
         serialize(w: pb_1.BinaryWriter): void;
         serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
             const writer = w || new pb_1.BinaryWriter();
-            if (this.has_username && this.username.length)
-                writer.writeString(1, this.username);
-            if (this.has_pub_enc_key && this.pub_enc_key.length)
-                writer.writeBytes(2, this.pub_enc_key);
-            if (this.has_pub_sig_key && this.pub_sig_key.length)
-                writer.writeBytes(3, this.pub_sig_key);
+            if (this.has_bytes && this.bytes.length)
+                writer.writeBytes(1, this.bytes);
+            if (this.has_sig && this.sig.length)
+                writer.writeBytes(2, this.sig);
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): SignedBytes {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new SignedBytes();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        message.bytes = reader.readBytes();
+                        break;
+                    case 2:
+                        message.sig = reader.readBytes();
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): SignedBytes {
+            return SignedBytes.deserialize(bytes);
+        }
+    }
+    export class InitPQXDHKeyBundle extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            id_key: Uint8Array;
+            prekey: SignedBytes;
+            pqkem_prekey: SignedBytes;
+            one_time_prekeys: Uint8Array[];
+            one_time_pqkem_prekeys: SignedBytes[];
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [4, 5], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                this.id_key = data.id_key;
+                this.prekey = data.prekey;
+                this.pqkem_prekey = data.pqkem_prekey;
+                this.one_time_prekeys = data.one_time_prekeys;
+                this.one_time_pqkem_prekeys = data.one_time_pqkem_prekeys;
+            }
+        }
+        get id_key() {
+            return pb_1.Message.getField(this, 1) as Uint8Array;
+        }
+        set id_key(value: Uint8Array) {
+            pb_1.Message.setField(this, 1, value);
+        }
+        get has_id_key() {
+            return pb_1.Message.getField(this, 1) != null;
+        }
+        get prekey() {
+            return pb_1.Message.getWrapperField(this, SignedBytes, 2) as SignedBytes;
+        }
+        set prekey(value: SignedBytes) {
+            pb_1.Message.setWrapperField(this, 2, value);
+        }
+        get has_prekey() {
+            return pb_1.Message.getField(this, 2) != null;
+        }
+        get pqkem_prekey() {
+            return pb_1.Message.getWrapperField(this, SignedBytes, 3) as SignedBytes;
+        }
+        set pqkem_prekey(value: SignedBytes) {
+            pb_1.Message.setWrapperField(this, 3, value);
+        }
+        get has_pqkem_prekey() {
+            return pb_1.Message.getField(this, 3) != null;
+        }
+        get one_time_prekeys() {
+            return pb_1.Message.getFieldWithDefault(this, 4, []) as Uint8Array[];
+        }
+        set one_time_prekeys(value: Uint8Array[]) {
+            pb_1.Message.setField(this, 4, value);
+        }
+        get one_time_pqkem_prekeys() {
+            return pb_1.Message.getRepeatedWrapperField(this, SignedBytes, 5) as SignedBytes[];
+        }
+        set one_time_pqkem_prekeys(value: SignedBytes[]) {
+            pb_1.Message.setRepeatedWrapperField(this, 5, value);
+        }
+        static fromObject(data: {
+            id_key?: Uint8Array;
+            prekey?: ReturnType<typeof SignedBytes.prototype.toObject>;
+            pqkem_prekey?: ReturnType<typeof SignedBytes.prototype.toObject>;
+            one_time_prekeys: Uint8Array[];
+            one_time_pqkem_prekeys?: ReturnType<typeof SignedBytes.prototype.toObject>[];
+        }): InitPQXDHKeyBundle {
+            const message = new InitPQXDHKeyBundle({
+                id_key: data.id_key,
+                prekey: SignedBytes.fromObject(data.prekey),
+                pqkem_prekey: SignedBytes.fromObject(data.pqkem_prekey),
+                one_time_prekeys: data.one_time_prekeys,
+                one_time_pqkem_prekeys: data.one_time_pqkem_prekeys.map(item => SignedBytes.fromObject(item))
+            });
+            return message;
+        }
+        toObject() {
+            const data: {
+                id_key?: Uint8Array;
+                prekey?: ReturnType<typeof SignedBytes.prototype.toObject>;
+                pqkem_prekey?: ReturnType<typeof SignedBytes.prototype.toObject>;
+                one_time_prekeys: Uint8Array[];
+                one_time_pqkem_prekeys?: ReturnType<typeof SignedBytes.prototype.toObject>[];
+            } = {
+                one_time_prekeys: this.one_time_prekeys
+            };
+            if (this.id_key != null) {
+                data.id_key = this.id_key;
+            }
+            if (this.prekey != null) {
+                data.prekey = this.prekey.toObject();
+            }
+            if (this.pqkem_prekey != null) {
+                data.pqkem_prekey = this.pqkem_prekey.toObject();
+            }
+            if (this.one_time_pqkem_prekeys != null) {
+                data.one_time_pqkem_prekeys = this.one_time_pqkem_prekeys.map((item: SignedBytes) => item.toObject());
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.has_id_key && this.id_key.length)
+                writer.writeBytes(1, this.id_key);
+            if (this.has_prekey)
+                writer.writeMessage(2, this.prekey, () => this.prekey.serialize(writer));
+            if (this.has_pqkem_prekey)
+                writer.writeMessage(3, this.pqkem_prekey, () => this.pqkem_prekey.serialize(writer));
+            if (this.one_time_prekeys.length)
+                writer.writeRepeatedBytes(4, this.one_time_prekeys);
+            if (this.one_time_pqkem_prekeys.length)
+                writer.writeRepeatedMessage(5, this.one_time_pqkem_prekeys, (item: SignedBytes) => item.serialize(writer));
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): InitPQXDHKeyBundle {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new InitPQXDHKeyBundle();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        message.id_key = reader.readBytes();
+                        break;
+                    case 2:
+                        reader.readMessage(message.prekey, () => message.prekey = SignedBytes.deserialize(reader));
+                        break;
+                    case 3:
+                        reader.readMessage(message.pqkem_prekey, () => message.pqkem_prekey = SignedBytes.deserialize(reader));
+                        break;
+                    case 4:
+                        pb_1.Message.addToRepeatedField(message, 4, reader.readBytes());
+                        break;
+                    case 5:
+                        reader.readMessage(message.one_time_pqkem_prekeys, () => pb_1.Message.addToRepeatedWrapperField(message, 5, SignedBytes.deserialize(reader), SignedBytes));
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): InitPQXDHKeyBundle {
+            return InitPQXDHKeyBundle.deserialize(bytes);
+        }
+    }
+    export class PQXDHKeyBundle extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            id_key: Uint8Array;
+            prekey: SignedBytes;
+            pqkem_prekey: SignedBytes;
+            one_time_prekey?: Uint8Array;
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                this.id_key = data.id_key;
+                this.prekey = data.prekey;
+                this.pqkem_prekey = data.pqkem_prekey;
+                if ("one_time_prekey" in data && data.one_time_prekey != undefined) {
+                    this.one_time_prekey = data.one_time_prekey;
+                }
+            }
+        }
+        get id_key() {
+            return pb_1.Message.getField(this, 1) as Uint8Array;
+        }
+        set id_key(value: Uint8Array) {
+            pb_1.Message.setField(this, 1, value);
+        }
+        get has_id_key() {
+            return pb_1.Message.getField(this, 1) != null;
+        }
+        get prekey() {
+            return pb_1.Message.getWrapperField(this, SignedBytes, 2) as SignedBytes;
+        }
+        set prekey(value: SignedBytes) {
+            pb_1.Message.setWrapperField(this, 2, value);
+        }
+        get has_prekey() {
+            return pb_1.Message.getField(this, 2) != null;
+        }
+        get pqkem_prekey() {
+            return pb_1.Message.getWrapperField(this, SignedBytes, 3) as SignedBytes;
+        }
+        set pqkem_prekey(value: SignedBytes) {
+            pb_1.Message.setWrapperField(this, 3, value);
+        }
+        get has_pqkem_prekey() {
+            return pb_1.Message.getField(this, 3) != null;
+        }
+        get one_time_prekey() {
+            return pb_1.Message.getFieldWithDefault(this, 4, new Uint8Array(0)) as Uint8Array;
+        }
+        set one_time_prekey(value: Uint8Array) {
+            pb_1.Message.setField(this, 4, value);
+        }
+        get has_one_time_prekey() {
+            return pb_1.Message.getField(this, 4) != null;
+        }
+        static fromObject(data: {
+            id_key?: Uint8Array;
+            prekey?: ReturnType<typeof SignedBytes.prototype.toObject>;
+            pqkem_prekey?: ReturnType<typeof SignedBytes.prototype.toObject>;
+            one_time_prekey?: Uint8Array;
+        }): PQXDHKeyBundle {
+            const message = new PQXDHKeyBundle({
+                id_key: data.id_key,
+                prekey: SignedBytes.fromObject(data.prekey),
+                pqkem_prekey: SignedBytes.fromObject(data.pqkem_prekey)
+            });
+            if (data.one_time_prekey != null) {
+                message.one_time_prekey = data.one_time_prekey;
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                id_key?: Uint8Array;
+                prekey?: ReturnType<typeof SignedBytes.prototype.toObject>;
+                pqkem_prekey?: ReturnType<typeof SignedBytes.prototype.toObject>;
+                one_time_prekey?: Uint8Array;
+            } = {};
+            if (this.id_key != null) {
+                data.id_key = this.id_key;
+            }
+            if (this.prekey != null) {
+                data.prekey = this.prekey.toObject();
+            }
+            if (this.pqkem_prekey != null) {
+                data.pqkem_prekey = this.pqkem_prekey.toObject();
+            }
+            if (this.one_time_prekey != null) {
+                data.one_time_prekey = this.one_time_prekey;
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.has_id_key && this.id_key.length)
+                writer.writeBytes(1, this.id_key);
+            if (this.has_prekey)
+                writer.writeMessage(2, this.prekey, () => this.prekey.serialize(writer));
+            if (this.has_pqkem_prekey)
+                writer.writeMessage(3, this.pqkem_prekey, () => this.pqkem_prekey.serialize(writer));
+            if (this.has_one_time_prekey && this.one_time_prekey.length)
+                writer.writeBytes(4, this.one_time_prekey);
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): PQXDHKeyBundle {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new PQXDHKeyBundle();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        message.id_key = reader.readBytes();
+                        break;
+                    case 2:
+                        reader.readMessage(message.prekey, () => message.prekey = SignedBytes.deserialize(reader));
+                        break;
+                    case 3:
+                        reader.readMessage(message.pqkem_prekey, () => message.pqkem_prekey = SignedBytes.deserialize(reader));
+                        break;
+                    case 4:
+                        message.one_time_prekey = reader.readBytes();
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): PQXDHKeyBundle {
+            return PQXDHKeyBundle.deserialize(bytes);
+        }
+    }
+    export class Identity extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            handle: string;
+            key_bundle: InitPQXDHKeyBundle;
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                this.handle = data.handle;
+                this.key_bundle = data.key_bundle;
+            }
+        }
+        get handle() {
+            return pb_1.Message.getField(this, 1) as string;
+        }
+        set handle(value: string) {
+            pb_1.Message.setField(this, 1, value);
+        }
+        get has_handle() {
+            return pb_1.Message.getField(this, 1) != null;
+        }
+        get key_bundle() {
+            return pb_1.Message.getWrapperField(this, InitPQXDHKeyBundle, 2) as InitPQXDHKeyBundle;
+        }
+        set key_bundle(value: InitPQXDHKeyBundle) {
+            pb_1.Message.setWrapperField(this, 2, value);
+        }
+        get has_key_bundle() {
+            return pb_1.Message.getField(this, 2) != null;
+        }
+        static fromObject(data: {
+            handle?: string;
+            key_bundle?: ReturnType<typeof InitPQXDHKeyBundle.prototype.toObject>;
+        }): Identity {
+            const message = new Identity({
+                handle: data.handle,
+                key_bundle: InitPQXDHKeyBundle.fromObject(data.key_bundle)
+            });
+            return message;
+        }
+        toObject() {
+            const data: {
+                handle?: string;
+                key_bundle?: ReturnType<typeof InitPQXDHKeyBundle.prototype.toObject>;
+            } = {};
+            if (this.handle != null) {
+                data.handle = this.handle;
+            }
+            if (this.key_bundle != null) {
+                data.key_bundle = this.key_bundle.toObject();
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.has_handle && this.handle.length)
+                writer.writeString(1, this.handle);
+            if (this.has_key_bundle)
+                writer.writeMessage(2, this.key_bundle, () => this.key_bundle.serialize(writer));
             if (!w)
                 return writer.getResultBuffer();
         }
@@ -96,13 +451,10 @@ export namespace messages {
                     break;
                 switch (reader.getFieldNumber()) {
                     case 1:
-                        message.username = reader.readString();
+                        message.handle = reader.readString();
                         break;
                     case 2:
-                        message.pub_enc_key = reader.readBytes();
-                        break;
-                    case 3:
-                        message.pub_sig_key = reader.readBytes();
+                        reader.readMessage(message.key_bundle, () => message.key_bundle = InitPQXDHKeyBundle.deserialize(reader));
                         break;
                     default: reader.skipField();
                 }

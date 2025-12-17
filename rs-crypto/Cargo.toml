@@ -1,0 +1,18 @@
+[package]
+name = "crypto"
+version = "0.1.0"
+edition = "2024"
+build = "build.rs"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+libc = "0.2.178"
+pqc_kyber = { version = "0.7.1", features = ["kyber1024", "std"] }
+rand = "0.8.5"
+x25519-dalek = "2.0.1"
+xeddsa = "1.0.2"
+
+[build-dependencies]
+cbindgen = "0.29.2"

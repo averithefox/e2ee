@@ -5,7 +5,7 @@ package websocket;
 option optimize_for = SPEED;
 
 message Challenge {
-  required bytes challenge = 1;
+  required bytes nonce = 1;
 }
 
 message ChallengeResponse {
