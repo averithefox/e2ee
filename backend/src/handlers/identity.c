@@ -82,7 +82,7 @@ void handle_identity_request(struct mg_connection *c,
       "pqspk_sig"
     ")values(?,?,?,?,?,?);";
   const char* sql1 = "insert into pqopks (for,bytes,sig) values (?,?,?);";
-  const char* sql2 = "insert into opks (for,bytes) values (?,?,?);";
+  const char* sql2 = "insert into opks (for,bytes) values (?,?);";
   // clang-format on
 
   if (sqlite3_prepare_v3(db, sql0, -1, 0, &stmt0, NULL) < 0 ||

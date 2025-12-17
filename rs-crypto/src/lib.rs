@@ -43,9 +43,7 @@ pub unsafe extern "C" fn xeddsa_verify(
     let msg_bytes = std::slice::from_raw_parts(msg_buf, msg_len);
     let sig_bytes = &*(sig_buf as *const [u8; 64]);
 
-    let pk = PublicKey::from(&x25519_dalek::PublicKey::from(
-        &x25519_dalek::StaticSecret::from(pk_bytes),
-    ));
+    let pk = PublicKey::from(&x25519_dalek::PublicKey::from(pk_bytes));
 
     let valid = pk.verify(msg_bytes, sig_bytes);
 

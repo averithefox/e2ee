@@ -17,6 +17,7 @@ static const char *s_sql =
 
   "create table if not exists opks(" // one-time prekeys
     "id integer primary key autoincrement,"
+    "used integer not null default 0,"
     "for integer not null,"
     "bytes blob not null,"
     "foreign key (for) references identities(id) on delete cascade"
@@ -24,6 +25,7 @@ static const char *s_sql =
 
   "create table if not exists pqopks(" // signed one-time pqkem prekeys
     "id integer primary key autoincrement,"
+    "used integer not null default 0,"
     "for integer not null,"
     "bytes blob not null,"
     "sig blob not null, "

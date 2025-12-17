@@ -39,8 +39,8 @@ void handle_prekey_bundle_request(struct mg_connection *c,
       "pqspk,"
       "pqspk_sig "
     "from identities where handle = ?;";
-  const char* sql1 = "select id, bytes, sig from pqopks where for = ? order by id asc limit 1;";
-  const char* sql2 = "select id, bytes from opks where for = ? order by id asc limit 1;";
+  const char* sql1 = "select id, bytes, sig from pqopks where for = ? and used = 0 order by id asc limit 1;";
+  const char* sql2 = "select id, bytes from opks where for = ? and used = 0 order by id asc limit 1;";
   // clang-format on
 
   if (sqlite3_prepare_v3(db, sql0, -1, 0, &stmt0, NULL) < 0) {
@@ -159,7 +159,7 @@ void handle_prekey_bundle_request(struct mg_connection *c,
 
   if (pqopk_id != -1) {
     sqlite3_stmt *stmt = NULL;
-    const char *sql = "delete from pqopks where id = ?;";
+    const char *sql = "update pqopks set used = 1 where id = ?;";
     if (sqlite3_prepare_v3(db, sql, -1, 0, &stmt, NULL) >= 0) {
       if (sqlite3_bind_int64(stmt, 1, pqopk_id) >= 0) {
         if (sqlite3_step(stmt) != SQLITE_DONE) {
@@ -179,7 +179,7 @@ void handle_prekey_bundle_request(struct mg_connection *c,
 
   if (opk_id != -1) {
     sqlite3_stmt *stmt = NULL;
-    const char *sql = "delete from opks where id = ?;";
+    const char *sql = "update opks set used = 1 where id = ?;";
     if (sqlite3_prepare_v3(db, sql, -1, 0, &stmt, NULL) >= 0) {
       if (sqlite3_bind_int64(stmt, 1, opk_id) >= 0) {
         if (sqlite3_step(stmt) != SQLITE_DONE) {
