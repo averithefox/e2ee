@@ -15,10 +15,11 @@ PROTOBUF_C__BEGIN_DECLS
 #endif
 
 
-typedef struct Messages__SignedBytes Messages__SignedBytes;
-typedef struct Messages__InitPQXDHKeyBundle Messages__InitPQXDHKeyBundle;
+typedef struct Messages__Prekey Messages__Prekey;
+typedef struct Messages__SignedPrekey Messages__SignedPrekey;
 typedef struct Messages__PQXDHKeyBundle Messages__PQXDHKeyBundle;
 typedef struct Messages__Identity Messages__Identity;
+typedef struct Messages__IdentityPatch Messages__IdentityPatch;
 
 
 /* --- enums --- */
@@ -26,95 +27,112 @@ typedef struct Messages__Identity Messages__Identity;
 
 /* --- messages --- */
 
-struct  Messages__SignedBytes
+struct  Messages__Prekey
 {
   ProtobufCMessage base;
-  ProtobufCBinaryData bytes;
+  ProtobufCBinaryData key;
+  int64_t id;
+};
+#define MESSAGES__PREKEY__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&messages__prekey__descriptor) \
+, {0,NULL}, 0 }
+
+
+struct  Messages__SignedPrekey
+{
+  ProtobufCMessage base;
+  ProtobufCBinaryData key;
+  int64_t id;
   ProtobufCBinaryData sig;
 };
-#define MESSAGES__SIGNED_BYTES__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&messages__signed_bytes__descriptor) \
-, {0,NULL}, {0,NULL} }
-
-
-struct  Messages__InitPQXDHKeyBundle
-{
-  ProtobufCMessage base;
-  ProtobufCBinaryData id_key;
-  Messages__SignedBytes *prekey;
-  Messages__SignedBytes *pqkem_prekey;
-  size_t n_one_time_prekeys;
-  ProtobufCBinaryData *one_time_prekeys;
-  size_t n_one_time_pqkem_prekeys;
-  Messages__SignedBytes **one_time_pqkem_prekeys;
-};
-#define MESSAGES__INIT_PQXDHKEY_BUNDLE__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&messages__init_pqxdhkey_bundle__descriptor) \
-, {0,NULL}, NULL, NULL, 0,NULL, 0,NULL }
+#define MESSAGES__SIGNED_PREKEY__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&messages__signed_prekey__descriptor) \
+, {0,NULL}, 0, {0,NULL} }
 
 
 struct  Messages__PQXDHKeyBundle
 {
   ProtobufCMessage base;
   ProtobufCBinaryData id_key;
-  Messages__SignedBytes *prekey;
-  Messages__SignedBytes *pqkem_prekey;
-  protobuf_c_boolean has_one_time_prekey;
-  ProtobufCBinaryData one_time_prekey;
+  Messages__SignedPrekey *prekey;
+  Messages__SignedPrekey *pqkem_prekey;
+  Messages__Prekey *one_time_prekey;
 };
 #define MESSAGES__PQXDHKEY_BUNDLE__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&messages__pqxdhkey_bundle__descriptor) \
-, {0,NULL}, NULL, NULL, 0, {0,NULL} }
+, {0,NULL}, NULL, NULL, NULL }
 
 
 struct  Messages__Identity
 {
   ProtobufCMessage base;
   char *handle;
-  Messages__InitPQXDHKeyBundle *key_bundle;
+  ProtobufCBinaryData id_key;
+  Messages__SignedPrekey *prekey;
+  Messages__SignedPrekey *pqkem_prekey;
+  size_t n_one_time_pqkem_prekeys;
+  Messages__SignedPrekey **one_time_pqkem_prekeys;
+  size_t n_one_time_prekeys;
+  Messages__Prekey **one_time_prekeys;
 };
 #define MESSAGES__IDENTITY__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&messages__identity__descriptor) \
-, NULL, NULL }
+, NULL, {0,NULL}, NULL, NULL, 0,NULL, 0,NULL }
 
 
-/* Messages__SignedBytes methods */
-void   messages__signed_bytes__init
-                     (Messages__SignedBytes         *message);
-size_t messages__signed_bytes__get_packed_size
-                     (const Messages__SignedBytes   *message);
-size_t messages__signed_bytes__pack
-                     (const Messages__SignedBytes   *message,
+struct  Messages__IdentityPatch
+{
+  ProtobufCMessage base;
+  char *handle;
+  Messages__SignedPrekey *prekey;
+  Messages__SignedPrekey *pqkem_prekey;
+  size_t n_one_time_pqkem_prekeys;
+  Messages__SignedPrekey **one_time_pqkem_prekeys;
+  size_t n_one_time_prekeys;
+  Messages__Prekey **one_time_prekeys;
+};
+#define MESSAGES__IDENTITY_PATCH__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&messages__identity_patch__descriptor) \
+, NULL, NULL, NULL, 0,NULL, 0,NULL }
+
+
+/* Messages__Prekey methods */
+void   messages__prekey__init
+                     (Messages__Prekey         *message);
+size_t messages__prekey__get_packed_size
+                     (const Messages__Prekey   *message);
+size_t messages__prekey__pack
+                     (const Messages__Prekey   *message,
                       uint8_t             *out);
-size_t messages__signed_bytes__pack_to_buffer
-                     (const Messages__SignedBytes   *message,
+size_t messages__prekey__pack_to_buffer
+                     (const Messages__Prekey   *message,
                       ProtobufCBuffer     *buffer);
-Messages__SignedBytes *
-       messages__signed_bytes__unpack
+Messages__Prekey *
+       messages__prekey__unpack
                      (ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data);
-void   messages__signed_bytes__free_unpacked
-                     (Messages__SignedBytes *message,
+void   messages__prekey__free_unpacked
+                     (Messages__Prekey *message,
                       ProtobufCAllocator *allocator);
-/* Messages__InitPQXDHKeyBundle methods */
-void   messages__init_pqxdhkey_bundle__init
-                     (Messages__InitPQXDHKeyBundle         *message);
-size_t messages__init_pqxdhkey_bundle__get_packed_size
-                     (const Messages__InitPQXDHKeyBundle   *message);
-size_t messages__init_pqxdhkey_bundle__pack
-                     (const Messages__InitPQXDHKeyBundle   *message,
+/* Messages__SignedPrekey methods */
+void   messages__signed_prekey__init
+                     (Messages__SignedPrekey         *message);
+size_t messages__signed_prekey__get_packed_size
+                     (const Messages__SignedPrekey   *message);
+size_t messages__signed_prekey__pack
+                     (const Messages__SignedPrekey   *message,
                       uint8_t             *out);
-size_t messages__init_pqxdhkey_bundle__pack_to_buffer
-                     (const Messages__InitPQXDHKeyBundle   *message,
+size_t messages__signed_prekey__pack_to_buffer
+                     (const Messages__SignedPrekey   *message,
                       ProtobufCBuffer     *buffer);
-Messages__InitPQXDHKeyBundle *
-       messages__init_pqxdhkey_bundle__unpack
+Messages__SignedPrekey *
+       messages__signed_prekey__unpack
                      (ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data);
-void   messages__init_pqxdhkey_bundle__free_unpacked
-                     (Messages__InitPQXDHKeyBundle *message,
+void   messages__signed_prekey__free_unpacked
+                     (Messages__SignedPrekey *message,
                       ProtobufCAllocator *allocator);
 /* Messages__PQXDHKeyBundle methods */
 void   messages__pqxdhkey_bundle__init
@@ -154,13 +172,32 @@ Messages__Identity *
 void   messages__identity__free_unpacked
                      (Messages__Identity *message,
                       ProtobufCAllocator *allocator);
+/* Messages__IdentityPatch methods */
+void   messages__identity_patch__init
+                     (Messages__IdentityPatch         *message);
+size_t messages__identity_patch__get_packed_size
+                     (const Messages__IdentityPatch   *message);
+size_t messages__identity_patch__pack
+                     (const Messages__IdentityPatch   *message,
+                      uint8_t             *out);
+size_t messages__identity_patch__pack_to_buffer
+                     (const Messages__IdentityPatch   *message,
+                      ProtobufCBuffer     *buffer);
+Messages__IdentityPatch *
+       messages__identity_patch__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   messages__identity_patch__free_unpacked
+                     (Messages__IdentityPatch *message,
+                      ProtobufCAllocator *allocator);
 /* --- per-message closures --- */
 
-typedef void (*Messages__SignedBytes_Closure)
-                 (const Messages__SignedBytes *message,
+typedef void (*Messages__Prekey_Closure)
+                 (const Messages__Prekey *message,
                   void *closure_data);
-typedef void (*Messages__InitPQXDHKeyBundle_Closure)
-                 (const Messages__InitPQXDHKeyBundle *message,
+typedef void (*Messages__SignedPrekey_Closure)
+                 (const Messages__SignedPrekey *message,
                   void *closure_data);
 typedef void (*Messages__PQXDHKeyBundle_Closure)
                  (const Messages__PQXDHKeyBundle *message,
@@ -168,16 +205,20 @@ typedef void (*Messages__PQXDHKeyBundle_Closure)
 typedef void (*Messages__Identity_Closure)
                  (const Messages__Identity *message,
                   void *closure_data);
+typedef void (*Messages__IdentityPatch_Closure)
+                 (const Messages__IdentityPatch *message,
+                  void *closure_data);
 
 /* --- services --- */
 
 
 /* --- descriptors --- */
 
-extern const ProtobufCMessageDescriptor messages__signed_bytes__descriptor;
-extern const ProtobufCMessageDescriptor messages__init_pqxdhkey_bundle__descriptor;
+extern const ProtobufCMessageDescriptor messages__prekey__descriptor;
+extern const ProtobufCMessageDescriptor messages__signed_prekey__descriptor;
 extern const ProtobufCMessageDescriptor messages__pqxdhkey_bundle__descriptor;
 extern const ProtobufCMessageDescriptor messages__identity__descriptor;
+extern const ProtobufCMessageDescriptor messages__identity_patch__descriptor;
 
 PROTOBUF_C__END_DECLS
 

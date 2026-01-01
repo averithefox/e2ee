@@ -4,27 +4,37 @@ package messages;
 
 option optimize_for = SPEED;
 
-message SignedBytes {
-  required bytes bytes = 1;
-  required bytes sig = 2;
+message Prekey {
+  required bytes key = 1;
+  required int64 id = 2;
 }
 
-message InitPQXDHKeyBundle {
-  required bytes id_key = 1;
-  required SignedBytes prekey = 2;
-  required SignedBytes pqkem_prekey = 3;
-  repeated bytes one_time_prekeys = 4;
-  repeated SignedBytes one_time_pqkem_prekeys = 5;
+message SignedPrekey {
+  required bytes key = 1;
+  required int64 id = 2;
+  required bytes sig = 3;
 }
 
 message PQXDHKeyBundle {
   required bytes id_key = 1;
-  required SignedBytes prekey = 2;
-  required SignedBytes pqkem_prekey = 3;
-  optional bytes one_time_prekey = 4;
+  required SignedPrekey prekey = 2;
+  required SignedPrekey pqkem_prekey = 3;
+  optional Prekey one_time_prekey = 4;
 }
 
 message Identity {
   required string handle = 1;
-  required InitPQXDHKeyBundle key_bundle = 2;
+  required bytes id_key = 2;
+  required SignedPrekey prekey = 3;
+  required SignedPrekey pqkem_prekey = 4;
+  repeated SignedPrekey one_time_pqkem_prekeys = 5;
+  repeated Prekey one_time_prekeys = 6;
+}
+
+message IdentityPatch {
+  optional string handle = 1;
+  optional SignedPrekey prekey = 2;
+  optional SignedPrekey pqkem_prekey = 3;
+  repeated SignedPrekey one_time_pqkem_prekeys = 4;
+  repeated Prekey one_time_prekeys = 5;
 }

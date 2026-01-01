@@ -8,6 +8,8 @@
 #include "mongoose.h"
 #include "websocket.pb-c.h"
 
+#define OPK_CNT_WARNING_THRESHOLD 10
+
 void handle_ws_upgrade_request(struct mg_connection *c,
                                struct mg_http_message *hm) {
   mg_ws_upgrade(c, hm, NULL);
@@ -96,28 +98,29 @@ cleanup:
 void handle_ws_challenge_response(struct mg_connection *c,
                                   Websocket__ChallengeResponse *msg) {
   sqlite3_stmt *stmt = NULL;
-  EVP_PKEY *pkey = NULL;
 
   if (msg->signature.len != XEDDSA_SIGNATURE_LENGTH) {
     fprintf(stderr, "[%s:%d] invalid signature\n", __func__, __LINE__);
     goto err;
   }
 
-  if (sqlite3_prepare_v3(db, "select id, ik from identities where handle = ?;",
-                         -1, 0, &stmt, NULL) < 0) {
-    fprintf(stderr, "[%s:%d] prepare failed: %s\n", __func__, __LINE__,
+  int rc;
+  if ((rc = sqlite3_prepare_v3(db,
+                               "select id,ik from identities where handle = ?;",
+                               -1, 0, &stmt, NULL)) != SQLITE_OK) {
+    fprintf(stderr, "[%s:%d] prepare failed: %d (%s)\n", __func__, __LINE__, rc,
             sqlite3_errmsg(db));
     goto err;
   }
 
-  if (sqlite3_bind_text(stmt, 1, msg->handle, -1, SQLITE_STATIC) < 0) {
-    fprintf(stderr, "[%s:%d] bind failed: %s\n", __func__, __LINE__,
+  if ((rc = sqlite3_bind_text(stmt, 1, msg->handle, -1, SQLITE_STATIC)) !=
+      SQLITE_OK) {
+    fprintf(stderr, "[%s:%d] bind failed: %d (%s)\n", __func__, __LINE__, rc,
             sqlite3_errmsg(db));
     goto err;
   }
 
-  int err = sqlite3_step(stmt);
-  switch (err) {
+  switch (rc = sqlite3_step(stmt)) {
     case SQLITE_ROW:
       break;
     case SQLITE_DONE: {
@@ -125,7 +128,7 @@ void handle_ws_challenge_response(struct mg_connection *c,
       goto err;
     }
     default: {
-      fprintf(stderr, "[%s:%d] step failed: %s\n", __func__, __LINE__,
+      fprintf(stderr, "[%s:%d] step failed: %d (%s)\n", __func__, __LINE__, rc,
               sqlite3_errmsg(db));
       goto err;
     }
@@ -149,12 +152,13 @@ void handle_ws_challenge_response(struct mg_connection *c,
 
   ctx->id = id;
 
+  check_opk_status(c);
+
   goto cleanup;
 err:
   c->is_draining = 1;
 cleanup:
   if (stmt) sqlite3_finalize(stmt);
-  if (pkey) EVP_PKEY_free(pkey);
 }
 
 struct mg_connection *find_ws_conn_by_id(struct mg_mgr *mgr, int64_t id) {
@@ -164,4 +168,99 @@ struct mg_connection *find_ws_conn_by_id(struct mg_mgr *mgr, int64_t id) {
     if (ctx && ctx->id == id) return c;
   }
   return NULL;
+}
+
+void check_opk_status(struct mg_connection *c) {
+  sqlite3_stmt *stmt0 = NULL, *stmt1 = NULL, *stmt2 = NULL, *stmt3 = NULL;
+
+  struct ws_ctx *ctx = c->fn_data;
+  if (!ctx || ctx->id == -1) {
+    fprintf(stderr, "[%s:%d] ran on un-initialized connection\n", __func__,
+            __LINE__);
+    goto err;
+  }
+
+  const char *sql0 = "select uid,used from pqopks where `for` = ?;";
+  const char *sql1 = "select uid,used from opks where `for` = ?;";
+  const char *sql2 = "delete from pqopks where `for` = ? and used = 1;";
+  const char *sql3 = "delete from opks where `for` = ? and used = 1;";
+
+  int rc;
+  if ((rc = sqlite3_prepare_v3(db, sql0, -1, 0, &stmt0, NULL)) != SQLITE_OK ||
+      (rc = sqlite3_prepare_v3(db, sql1, -1, 0, &stmt1, NULL)) != SQLITE_OK ||
+      (rc = sqlite3_prepare_v3(db, sql2, -1, 0, &stmt2, NULL)) != SQLITE_OK ||
+      (rc = sqlite3_prepare_v3(db, sql3, -1, 0, &stmt3, NULL)) != SQLITE_OK) {
+    fprintf(stderr, "[%s:%d] prepare failed: %d (%s)\n", __func__, __LINE__, rc,
+            sqlite3_errmsg(db));
+    goto err;
+  }
+
+  if ((rc = sqlite3_bind_int64(stmt0, 1, ctx->id)) != SQLITE_OK ||
+      (rc = sqlite3_bind_int64(stmt1, 1, ctx->id)) != SQLITE_OK ||
+      (rc = sqlite3_bind_int64(stmt2, 1, ctx->id)) != SQLITE_OK ||
+      (rc = sqlite3_bind_int64(stmt3, 1, ctx->id)) != SQLITE_OK) {
+    fprintf(stderr, "[%s:%d] bind failed: %d (%s)\n", __func__, __LINE__, rc,
+            sqlite3_errmsg(db));
+    goto err;
+  }
+
+  Websocket__Envelope env = WEBSOCKET__ENVELOPE__INIT;
+  Websocket__KeysUsed pb = WEBSOCKET__KEYS_USED__INIT;
+
+  env.payload_case = WEBSOCKET__ENVELOPE__PAYLOAD_KEYS_USED;
+  env.keys_used = &pb;
+
+  int64_t ids[512];
+  pb.ids = ids;
+
+  while ((rc = sqlite3_step(stmt0)) == SQLITE_ROW) {
+    if (sqlite3_column_int(stmt0, 1)) {
+      if (pb.n_ids == sizeof ids / sizeof *ids) continue;
+      ids[pb.n_ids++] = sqlite3_column_int64(stmt0, 0);
+    } else {
+      ++pb.pqopks_remaining;
+    }
+  }
+
+  while ((rc = sqlite3_step(stmt1)) == SQLITE_ROW) {
+    if (sqlite3_column_int(stmt1, 1)) {
+      if (pb.n_ids == sizeof ids / sizeof *ids) continue;
+      ids[pb.n_ids++] = sqlite3_column_int64(stmt1, 0);
+    } else {
+      ++pb.opks_remaining;
+    }
+  }
+
+  if (rc != SQLITE_DONE) {
+    fprintf(stderr, "[%s:%d] step failed: %d (%s)\n", __func__, __LINE__, rc,
+            sqlite3_errmsg(db));
+    goto err;
+  }
+
+  if (pb.n_ids > 0 || pb.opks_remaining <= OPK_CNT_WARNING_THRESHOLD ||
+      pb.pqopks_remaining <= OPK_CNT_WARNING_THRESHOLD) {
+    size_t n = websocket__envelope__get_packed_size(&env);
+    void *buf = malloc(n);
+    if (!buf) {
+      fprintf(stderr, "[%s:%d] out of memory\n", __func__, __LINE__);
+      goto err;
+    }
+
+    websocket__envelope__pack(&env, buf);
+    mg_ws_send(c, buf, n, WEBSOCKET_OP_BINARY);
+    free(buf);
+  }
+
+  if (sqlite3_step(stmt2) != SQLITE_DONE ||
+      sqlite3_step(stmt3) != SQLITE_DONE) {
+    fprintf(stderr, "[%s:%d] step failed: %s\n", __func__, __LINE__,
+            sqlite3_errmsg(db));
+    goto err;
+  }
+
+err:
+  if (stmt0) sqlite3_finalize(stmt0);
+  if (stmt1) sqlite3_finalize(stmt1);
+  if (stmt2) sqlite3_finalize(stmt2);
+  if (stmt3) sqlite3_finalize(stmt3);
 }

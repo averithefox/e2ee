@@ -4,5 +4,4 @@ build/
 target/
 /data/
 __dev__/
-rs-crypto/include/
 .cache/

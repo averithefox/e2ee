@@ -7,29 +7,35 @@
 #include "server.h"
 
 static const char *s_listening_addr = "http://0.0.0.0:8000";
+static const char *s_db_path = "./data.sqlite";
 
 static int s_signo;
 inline static void signal_handler(int signo) { s_signo = signo; }
 
 int main(int argc, char **argv) {
   for (int i = 1; i < argc; ++i) {
-    char *arg = argv[i];
-    if (strcmp(arg, "--listen") == 0 || strcmp(arg, "-l") == 0) {
-      s_listening_addr = argv[++i];
-    } else if (strcmp(arg, "--help") == 0) {
+    if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
       fprintf(stdout,
               "Usage: %s [OPTIONS]\n"
               "\n"
               "Options:\n"
-              "  -l, --listen ADDR    Set listening address (default: "
-              "http://0.0.0.0:8000)\n"
-              "  --help               Show this help message and exit\n",
-              argv[0]);
+              "  -l, --listen ADDR    Set listening address (default: %s)\n"
+              "  -d, --db PATH        Set database path (default: %s)\n"
+              "  -h, --help           Show this help message and exit\n",
+              argv[0], s_listening_addr, s_db_path);
       return EXIT_SUCCESS;
+    }
+  }
+
+  for (int i = 1; i < argc; ++i) {
+    char *arg = argv[i];
+    if (strcmp(arg, "-l") == 0 || strcmp(arg, "--listen") == 0) {
+      s_listening_addr = argv[++i];
+    } else if (strcmp(arg, "-d") == 0 || strcmp(arg, "--db") == 0) {
+      s_db_path = argv[++i];
     } else {
       fprintf(stderr,
-              "illegal option: %s\ntry `%s --help` for more "
-              "information.\n",
+              "illegal option: %s\ntry `%s --help` for more information.\n",
               arg, argv[0]);
       return EXIT_FAILURE;
     }
@@ -51,7 +57,7 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
-  if (db_init(&db, "data.sqlite") < 0) {
+  if (db_init(&db, s_db_path) != SQLITE_OK) {
     mg_mgr_free(&mgr);
     return EXIT_FAILURE;
   }

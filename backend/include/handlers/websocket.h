@@ -16,3 +16,5 @@ void handle_ws_message(struct mg_connection *c, struct mg_ws_message *wm);
 void handle_ws_challenge_response(struct mg_connection *c,
                                   Websocket__ChallengeResponse *msg);
 struct mg_connection *find_ws_conn_by_id(struct mg_mgr *mgr, int64_t id);
+
+void check_opk_status(struct mg_connection *c);

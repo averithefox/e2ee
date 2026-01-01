@@ -13,9 +13,16 @@ message ChallengeResponse {
   required bytes signature = 2;
 }
 
+message KeysUsed {
+  repeated int64 ids = 1 [packed = true];
+  required int64 opks_remaining = 2;
+  required int64 pqopks_remaining = 3;
+}
+
 message Envelope {
   oneof payload {
-    Challenge challenge = 1;
-    ChallengeResponse challenge_response = 2;
+    Challenge challenge = 1; // server -> client
+    ChallengeResponse challenge_response = 2; // client -> server
+    KeysUsed keys_used = 3; // server -> client
   }
 }

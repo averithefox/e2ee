@@ -10,49 +10,62 @@ static const char *s_sql =
     "handle text not null unique,"
     "ik blob not null," // identity key
     "spk blob not null," // signed prekey
+    "spk_id integer not null,"
     "spk_sig blob not null,"
     "pqspk blob not null," // last-resort post-quantum signed prekey
+    "pqspk_id integer not null,"
     "pqspk_sig blob not null"
   ");"
-
-  "create table if not exists opks(" // one-time prekeys
-    "id integer primary key autoincrement,"
-    "used integer not null default 0,"
-    "for integer not null,"
-    "bytes blob not null,"
-    "foreign key (for) references identities(id) on delete cascade"
-  ");"
+  "create index if not exists idx_identities_handle on identities(handle);"
+  "create index if not exists idx_identities_id on identities(id);"
 
   "create table if not exists pqopks(" // signed one-time pqkem prekeys
-    "id integer primary key autoincrement,"
+    "uid integer primary key autoincrement,"
+    "id integer not null,"
     "used integer not null default 0,"
     "for integer not null,"
     "bytes blob not null,"
     "sig blob not null, "
     "foreign key (for) references identities(id) on delete cascade"
-  ");";
+  ");"
+  "create index if not exists idx_pqopks_used_for on pqopks(used, for);"
+  "create index if not exists idx_pqopks_id on pqopks(id);"
+
+  "create table if not exists opks(" // one-time prekeys
+    "uid integer primary key autoincrement,"
+    "id integer not null,"
+    "used integer not null default 0,"
+    "for integer not null,"
+    "bytes blob not null,"
+    "foreign key (for) references identities(id) on delete cascade"
+  ");"
+  "create index if not exists idx_opks_used_for on opks(used, for);"
+  "create index if not exists idx_opks_id on opks(id);";
 // clang-format on
 
 sqlite3 *db = NULL;
 
 int db_init(sqlite3 **out, const char *path) {
-  int err;
+  int rc;
   sqlite3 *db;
 
-  if ((err = sqlite3_open_v2(
-           path, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL)) < 0) {
-    fprintf(stderr, "[%s] %s\n", __func__, sqlite3_errmsg(db));
-    return err;
+  if ((rc = sqlite3_open_v2(
+           path, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL)) !=
+      SQLITE_OK) {
+    fprintf(stderr, "[%s] open failed: %d (%s)\n", __func__, rc,
+            sqlite3_errmsg(db));
+    return rc;
   }
 
-  if ((err = sqlite3_exec(db, s_sql, NULL, NULL, NULL)) < 0) {
-    fprintf(stderr, "[%s] %s\n", __func__, sqlite3_errmsg(db));
-    return err;
+  if ((rc = sqlite3_exec(db, s_sql, NULL, NULL, NULL)) != SQLITE_OK) {
+    fprintf(stderr, "[%s] init failed: %d (%s)\n", __func__, rc,
+            sqlite3_errmsg(db));
+    return rc;
   }
 
   *out = db;
 
-  return err;
+  return rc;
 }
 
 void db_close(sqlite3 *db) {

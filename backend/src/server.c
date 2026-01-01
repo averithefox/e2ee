@@ -18,8 +18,9 @@ void handle_server_event(struct mg_connection *c, int ev, void *ev_data) {
   if (ev != MG_EV_HTTP_MSG) return;
   struct mg_http_message *hm = ev_data;
 
-  printf("%.*s %.*s\n", (int)hm->method.len, hm->method.buf, (int)hm->uri.len,
-         hm->uri.buf);
+  printf("%.*s %.*s%c%.*s\n", (int)hm->method.len, hm->method.buf,
+         (int)hm->uri.len, hm->uri.buf, hm->query.len ? '?' : 0,
+         (int)hm->query.len, hm->query.buf);
 
   if (mg_strcmp(hm->method, mg_str("OPTIONS")) == 0) {
     mg_http_reply(c, 204,

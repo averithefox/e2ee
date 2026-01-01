@@ -23,12 +23,12 @@ char *b64_decode(const char *b64, ssize_t b64_len, size_t *out_len) {
                    input_len);
   total_len = len;
 
-  int ret = EVP_DecodeFinal(ctx, (unsigned char *)output + total_len, &len);
+  int rc = EVP_DecodeFinal(ctx, (unsigned char *)output + total_len, &len);
   total_len += len;
 
   EVP_ENCODE_CTX_free(ctx);
 
-  if (ret < 0) {
+  if (rc < 0) {
     free(output);
     return NULL;
   }
