@@ -495,7 +495,7 @@ export namespace websocket {
             if (this.has_pqkem_ciphertext && this.pqkem_ciphertext.length)
                 writer.writeBytes(3, this.pqkem_ciphertext);
             if (this.prekey_ids.length)
-                writer.writePackedInt64(4, this.prekey_ids);
+                writer.writeRepeatedInt64(4, this.prekey_ids);
             if (this.has_initial_ciphertext && this.initial_ciphertext.length)
                 writer.writeBytes(5, this.initial_ciphertext);
             if (!w)
@@ -517,7 +517,7 @@ export namespace websocket {
                         message.pqkem_ciphertext = reader.readBytes();
                         break;
                     case 4:
-                        message.prekey_ids = reader.readPackedInt64();
+                        pb_1.Message.addToRepeatedField(message, 4, reader.readInt64());
                         break;
                     case 5:
                         message.initial_ciphertext = reader.readBytes();

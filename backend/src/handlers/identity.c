@@ -414,12 +414,49 @@ err:
   mg_http_reply(c, status_code, NEW_IDENTITY_REPLY_HEADERS, "");
 }
 
+static void handle_identity_DELETE_request(struct mg_connection *c,
+                                           struct mg_http_message *hm) {
+  int status_code = 418;
+  sqlite3_stmt *stmt = NULL;
+
+  int64_t id = verify_request(hm, NULL);
+  if (id < 0) ERR(-id);
+
+  int rc;
+  if ((rc = sqlite3_prepare_v3(db, "delete from identities where id=?;", -1, 0,
+                               &stmt, NULL)) != SQLITE_OK) {
+    fprintf(stderr, "[%s:%d] prepare failed: %d (%s)\n", __func__, __LINE__, rc,
+            sqlite3_errmsg(db));
+    ERR(500);
+  }
+
+  if ((rc = sqlite3_bind_int64(stmt, 1, id)) != SQLITE_OK) {
+    fprintf(stderr, "[%s:%d] bind failed: %d (%s)\n", __func__, __LINE__, rc,
+            sqlite3_errmsg(db));
+    ERR(500);
+  }
+
+  if ((rc = sqlite3_step(stmt)) != SQLITE_DONE) {
+    fprintf(stderr, "[%s:%d] step failed: %d (%s)\n", __func__, __LINE__, rc,
+            sqlite3_errmsg(db));
+    ERR(500);
+  }
+
+  status_code = 200;
+
+err:
+  if (stmt) sqlite3_finalize(stmt);
+  mg_http_reply(c, status_code, NEW_IDENTITY_REPLY_HEADERS, "");
+}
+
 void handle_identity_request(struct mg_connection *c,
                              struct mg_http_message *hm) {
   if (mg_strcmp(hm->method, mg_str("POST")) == 0) {
     handle_identity_POST_request(c, hm);
   } else if (mg_strcmp(hm->method, mg_str("PATCH")) == 0) {
     handle_identity_PATCH_request(c, hm);
+  } else if (mg_strcmp(hm->method, mg_str("DELETE")) == 0) {
+    handle_identity_DELETE_request(c, hm);
   } else {
     mg_http_reply(c, 405, NEW_IDENTITY_REPLY_HEADERS, "");
   }

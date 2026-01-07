@@ -26,11 +26,11 @@ message EncryptedMessage {
 }
 
 message PQXDHInit {
-  required bytes id_key = 1;                   // Sender's identity key
-  required bytes ephemeral_key = 2;            // Ephemeral X25519 key
-  required bytes pqkem_ciphertext = 3;         // ML-KEM encapsulation ciphertext
-  repeated int64 prekey_ids = 4 [packed=true]; // IDs of prekeys used [SPK, PQKEM, OPK?]
-  required bytes initial_ciphertext = 5;       // First encrypted message
+  required bytes id_key = 1;             // Sender's identity key
+  required bytes ephemeral_key = 2;      // Ephemeral X25519 key
+  required bytes pqkem_ciphertext = 3;   // ML-KEM encapsulation ciphertext
+  repeated int64 prekey_ids = 4;         // IDs of prekeys used [SPK, PQKEM, OPK?]
+  required bytes initial_ciphertext = 5; // First encrypted message
 }
 
 message Forward {

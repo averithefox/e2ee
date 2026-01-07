@@ -676,7 +676,7 @@ static const ProtobufCFieldDescriptor websocket__pqxdhinit__field_descriptors[5]
     offsetof(Websocket__PQXDHInit, prekey_ids),
     NULL,
     NULL,
-    PROTOBUF_C_FIELD_FLAG_PACKED,             /* flags */
+    0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {

@@ -9,11 +9,12 @@
 #include "websocket.pb-c.h"
 
 #define SELF -1
+#define NONE -1
 
-#define ERR(CODE)                        \
-  do {                                   \
-    err = WEBSOCKET__ACK__ERROR__##CODE; \
-    goto err;                            \
+#define ERR(CODE)                                     \
+  do {                                                \
+    ws_ack(c, msg_id, WEBSOCKET__ACK__ERROR__##CODE); \
+    goto err;                                         \
   } while (0)
 
 static bool ws_send(struct mg_connection *c,
@@ -38,7 +39,10 @@ static bool ws_ack(struct mg_connection *c, int64_t message_id,
                    Websocket__Ack__Error error) {
   Websocket__Ack ack = WEBSOCKET__ACK__INIT;
   ack.message_id = message_id;
-  if ((int)error != -1) ack.error = error;
+  if ((int)error != -1) {
+    ack.has_error = TRUE;
+    ack.error = error;
+  }
 
   Websocket__ClientboundMessage env = WEBSOCKET__CLIENTBOUND_MESSAGE__INIT;
   env.payload_case = WEBSOCKET__CLIENTBOUND_MESSAGE__PAYLOAD_ACK;
@@ -83,17 +87,17 @@ err:
 void handle_ws_message(struct mg_connection *c, struct mg_ws_message *wm) {
   Websocket__ServerboundMessage *env = NULL;
 
+  struct ws_ctx *ctx = c->fn_data;
+  if (!ctx) {
+    fprintf(stderr, "[%s:%d] context missing\n", __func__, __LINE__);
+    goto err;
+  }
+
   uint8_t op = wm->flags & 0x0f;
   if (op != WEBSOCKET_OP_BINARY) {
     fprintf(stderr, "[%s:%d] invalid message opcode (flags=0x%02x op=%u)\n",
             __func__, __LINE__, wm->flags, op);
     goto cleanup;
-  }
-
-  struct ws_ctx *ctx = c->fn_data;
-  if (!ctx) {
-    fprintf(stderr, "[%s:%d] context missing\n", __func__, __LINE__);
-    goto err;
   }
 
   env = websocket__serverbound_message__unpack(NULL, wm->data.len,
@@ -132,8 +136,13 @@ cleanup:
 void handle_ws_challenge_response_pb(struct mg_connection *c,
                                      Websocket__ChallengeResponse *msg,
                                      int64_t msg_id) {
-  Websocket__Ack__Error err = -1;
   sqlite3_stmt *stmt = NULL;
+
+  struct ws_ctx *ctx = c->fn_data;
+  if (!ctx) {
+    fprintf(stderr, "[%s:%d] context missing\n", __func__, __LINE__);
+    goto err;
+  }
 
   if (msg->signature.len != XEDDSA_SIGNATURE_LENGTH) {
     fprintf(stderr, "[%s:%d] invalid signature\n", __func__, __LINE__);
@@ -179,7 +188,6 @@ void handle_ws_challenge_response_pb(struct mg_connection *c,
     ERR(SERVER_ERROR);
   }
 
-  struct ws_ctx *ctx = c->fn_data;
   if (!xeddsa_verify(pk_buf, ctx->nonce, sizeof ctx->nonce,
                      msg->signature.data)) {
     fprintf(stderr, "[%s:%d] invalid signature\n", __func__, __LINE__);
@@ -188,6 +196,7 @@ void handle_ws_challenge_response_pb(struct mg_connection *c,
 
   ctx->id = id;
 
+  ws_ack(c, msg_id, NONE);
   handle_ws_authenticated(c);
 
   goto cleanup;
@@ -195,7 +204,6 @@ err:
   c->is_draining = 1;
 cleanup:
   if (stmt) sqlite3_finalize(stmt);
-  ws_ack(c, msg_id, err);
 }
 
 void handle_ws_authenticated(struct mg_connection *c) {
@@ -259,7 +267,6 @@ err:
 
 void handle_ws_forward_pb(struct mg_connection *c, Websocket__Forward *msg,
                           int64_t msg_id) {
-  Websocket__Ack__Error err = -1;
   sqlite3_stmt *stmt_id_by_handle = NULL, *stmt_handle_by_id = NULL;
 
   struct ws_ctx *ctx = c->fn_data;
@@ -325,11 +332,11 @@ void handle_ws_forward_pb(struct mg_connection *c, Websocket__Forward *msg,
   env.payload_case = WEBSOCKET__CLIENTBOUND_MESSAGE__PAYLOAD_FORWARD;
   env.forward = &forward;
 
+  ws_ack(c, msg_id, NONE);
   ws_send(c, &env, id);
 err:
   if (stmt_id_by_handle) sqlite3_finalize(stmt_id_by_handle);
   if (stmt_handle_by_id) sqlite3_finalize(stmt_handle_by_id);
-  ws_ack(c, msg_id, err);
 }
 
 struct mg_connection *find_ws_conn_by_id(struct mg_mgr *mgr, int64_t id) {
