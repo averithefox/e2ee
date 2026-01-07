@@ -161,6 +161,228 @@ export namespace websocket {
             return ChallengeResponse.deserialize(bytes);
         }
     }
+    export class MessageHeader extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            dh_public_key: Uint8Array;
+            previous_chain_len: number;
+            message_number: number;
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                this.dh_public_key = data.dh_public_key;
+                this.previous_chain_len = data.previous_chain_len;
+                this.message_number = data.message_number;
+            }
+        }
+        get dh_public_key() {
+            return pb_1.Message.getField(this, 1) as Uint8Array;
+        }
+        set dh_public_key(value: Uint8Array) {
+            pb_1.Message.setField(this, 1, value);
+        }
+        get has_dh_public_key() {
+            return pb_1.Message.getField(this, 1) != null;
+        }
+        get previous_chain_len() {
+            return pb_1.Message.getField(this, 2) as number;
+        }
+        set previous_chain_len(value: number) {
+            pb_1.Message.setField(this, 2, value);
+        }
+        get has_previous_chain_len() {
+            return pb_1.Message.getField(this, 2) != null;
+        }
+        get message_number() {
+            return pb_1.Message.getField(this, 3) as number;
+        }
+        set message_number(value: number) {
+            pb_1.Message.setField(this, 3, value);
+        }
+        get has_message_number() {
+            return pb_1.Message.getField(this, 3) != null;
+        }
+        static fromObject(data: {
+            dh_public_key?: Uint8Array;
+            previous_chain_len?: number;
+            message_number?: number;
+        }): MessageHeader {
+            const message = new MessageHeader({
+                dh_public_key: data.dh_public_key,
+                previous_chain_len: data.previous_chain_len,
+                message_number: data.message_number
+            });
+            return message;
+        }
+        toObject() {
+            const data: {
+                dh_public_key?: Uint8Array;
+                previous_chain_len?: number;
+                message_number?: number;
+            } = {};
+            if (this.dh_public_key != null) {
+                data.dh_public_key = this.dh_public_key;
+            }
+            if (this.previous_chain_len != null) {
+                data.previous_chain_len = this.previous_chain_len;
+            }
+            if (this.message_number != null) {
+                data.message_number = this.message_number;
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.has_dh_public_key && this.dh_public_key.length)
+                writer.writeBytes(1, this.dh_public_key);
+            if (this.has_previous_chain_len)
+                writer.writeUint32(2, this.previous_chain_len);
+            if (this.has_message_number)
+                writer.writeUint32(3, this.message_number);
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): MessageHeader {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new MessageHeader();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        message.dh_public_key = reader.readBytes();
+                        break;
+                    case 2:
+                        message.previous_chain_len = reader.readUint32();
+                        break;
+                    case 3:
+                        message.message_number = reader.readUint32();
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): MessageHeader {
+            return MessageHeader.deserialize(bytes);
+        }
+    }
+    export class EncryptedMessage extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            header: MessageHeader;
+            ciphertext: Uint8Array;
+            nonce: Uint8Array;
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                this.header = data.header;
+                this.ciphertext = data.ciphertext;
+                this.nonce = data.nonce;
+            }
+        }
+        get header() {
+            return pb_1.Message.getWrapperField(this, MessageHeader, 1) as MessageHeader;
+        }
+        set header(value: MessageHeader) {
+            pb_1.Message.setWrapperField(this, 1, value);
+        }
+        get has_header() {
+            return pb_1.Message.getField(this, 1) != null;
+        }
+        get ciphertext() {
+            return pb_1.Message.getField(this, 2) as Uint8Array;
+        }
+        set ciphertext(value: Uint8Array) {
+            pb_1.Message.setField(this, 2, value);
+        }
+        get has_ciphertext() {
+            return pb_1.Message.getField(this, 2) != null;
+        }
+        get nonce() {
+            return pb_1.Message.getField(this, 3) as Uint8Array;
+        }
+        set nonce(value: Uint8Array) {
+            pb_1.Message.setField(this, 3, value);
+        }
+        get has_nonce() {
+            return pb_1.Message.getField(this, 3) != null;
+        }
+        static fromObject(data: {
+            header?: ReturnType<typeof MessageHeader.prototype.toObject>;
+            ciphertext?: Uint8Array;
+            nonce?: Uint8Array;
+        }): EncryptedMessage {
+            const message = new EncryptedMessage({
+                header: MessageHeader.fromObject(data.header),
+                ciphertext: data.ciphertext,
+                nonce: data.nonce
+            });
+            return message;
+        }
+        toObject() {
+            const data: {
+                header?: ReturnType<typeof MessageHeader.prototype.toObject>;
+                ciphertext?: Uint8Array;
+                nonce?: Uint8Array;
+            } = {};
+            if (this.header != null) {
+                data.header = this.header.toObject();
+            }
+            if (this.ciphertext != null) {
+                data.ciphertext = this.ciphertext;
+            }
+            if (this.nonce != null) {
+                data.nonce = this.nonce;
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.has_header)
+                writer.writeMessage(1, this.header, () => this.header.serialize(writer));
+            if (this.has_ciphertext && this.ciphertext.length)
+                writer.writeBytes(2, this.ciphertext);
+            if (this.has_nonce && this.nonce.length)
+                writer.writeBytes(3, this.nonce);
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): EncryptedMessage {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new EncryptedMessage();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        reader.readMessage(message.header, () => message.header = MessageHeader.deserialize(reader));
+                        break;
+                    case 2:
+                        message.ciphertext = reader.readBytes();
+                        break;
+                    case 3:
+                        message.nonce = reader.readBytes();
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): EncryptedMessage {
+            return EncryptedMessage.deserialize(bytes);
+        }
+    }
     export class PQXDHInit extends pb_1.Message {
         #one_of_decls: number[][] = [];
         constructor(data?: any[] | {
@@ -313,11 +535,15 @@ export namespace websocket {
         }
     }
     export class Forward extends pb_1.Message {
-        #one_of_decls: number[][] = [[2]];
+        #one_of_decls: number[][] = [[2, 3]];
         constructor(data?: any[] | ({
             handle: string;
         } & (({
             pqxdh_init?: PQXDHInit;
+            message?: never;
+        } | {
+            pqxdh_init?: never;
+            message?: EncryptedMessage;
         })))) {
             super();
             pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
@@ -325,6 +551,9 @@ export namespace websocket {
                 this.handle = data.handle;
                 if ("pqxdh_init" in data && data.pqxdh_init != undefined) {
                     this.pqxdh_init = data.pqxdh_init;
+                }
+                if ("message" in data && data.message != undefined) {
+                    this.message = data.message;
                 }
             }
         }
@@ -346,18 +575,29 @@ export namespace websocket {
         get has_pqxdh_init() {
             return pb_1.Message.getField(this, 2) != null;
         }
+        get message() {
+            return pb_1.Message.getWrapperField(this, EncryptedMessage, 3) as EncryptedMessage;
+        }
+        set message(value: EncryptedMessage) {
+            pb_1.Message.setOneofWrapperField(this, 3, this.#one_of_decls[0], value);
+        }
+        get has_message() {
+            return pb_1.Message.getField(this, 3) != null;
+        }
         get payload() {
             const cases: {
-                [index: number]: "none" | "pqxdh_init";
+                [index: number]: "none" | "pqxdh_init" | "message";
             } = {
                 0: "none",
-                2: "pqxdh_init"
+                2: "pqxdh_init",
+                3: "message"
             };
-            return cases[pb_1.Message.computeOneofCase(this, [2])];
+            return cases[pb_1.Message.computeOneofCase(this, [2, 3])];
         }
         static fromObject(data: {
             handle?: string;
             pqxdh_init?: ReturnType<typeof PQXDHInit.prototype.toObject>;
+            message?: ReturnType<typeof EncryptedMessage.prototype.toObject>;
         }): Forward {
             const message = new Forward({
                 handle: data.handle
@@ -365,18 +605,25 @@ export namespace websocket {
             if (data.pqxdh_init != null) {
                 message.pqxdh_init = PQXDHInit.fromObject(data.pqxdh_init);
             }
+            if (data.message != null) {
+                message.message = EncryptedMessage.fromObject(data.message);
+            }
             return message;
         }
         toObject() {
             const data: {
                 handle?: string;
                 pqxdh_init?: ReturnType<typeof PQXDHInit.prototype.toObject>;
+                message?: ReturnType<typeof EncryptedMessage.prototype.toObject>;
             } = {};
             if (this.handle != null) {
                 data.handle = this.handle;
             }
             if (this.pqxdh_init != null) {
                 data.pqxdh_init = this.pqxdh_init.toObject();
+            }
+            if (this.message != null) {
+                data.message = this.message.toObject();
             }
             return data;
         }
@@ -388,6 +635,8 @@ export namespace websocket {
                 writer.writeString(1, this.handle);
             if (this.has_pqxdh_init)
                 writer.writeMessage(2, this.pqxdh_init, () => this.pqxdh_init.serialize(writer));
+            if (this.has_message)
+                writer.writeMessage(3, this.message, () => this.message.serialize(writer));
             if (!w)
                 return writer.getResultBuffer();
         }
@@ -403,6 +652,9 @@ export namespace websocket {
                     case 2:
                         reader.readMessage(message.pqxdh_init, () => message.pqxdh_init = PQXDHInit.deserialize(reader));
                         break;
+                    case 3:
+                        reader.readMessage(message.message, () => message.message = EncryptedMessage.deserialize(reader));
+                        break;
                     default: reader.skipField();
                 }
             }
@@ -415,20 +667,121 @@ export namespace websocket {
             return Forward.deserialize(bytes);
         }
     }
-    export class Envelope extends pb_1.Message {
+    export class Ack extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            message_id: number;
+            error?: Ack.Error;
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                this.message_id = data.message_id;
+                if ("error" in data && data.error != undefined) {
+                    this.error = data.error;
+                }
+            }
+        }
+        get message_id() {
+            return pb_1.Message.getField(this, 1) as number;
+        }
+        set message_id(value: number) {
+            pb_1.Message.setField(this, 1, value);
+        }
+        get has_message_id() {
+            return pb_1.Message.getField(this, 1) != null;
+        }
+        get error() {
+            return pb_1.Message.getFieldWithDefault(this, 2, Ack.Error.UNAUTHENTICATED) as Ack.Error;
+        }
+        set error(value: Ack.Error) {
+            pb_1.Message.setField(this, 2, value);
+        }
+        get has_error() {
+            return pb_1.Message.getField(this, 2) != null;
+        }
+        static fromObject(data: {
+            message_id?: number;
+            error?: Ack.Error;
+        }): Ack {
+            const message = new Ack({
+                message_id: data.message_id
+            });
+            if (data.error != null) {
+                message.error = data.error;
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                message_id?: number;
+                error?: Ack.Error;
+            } = {};
+            if (this.message_id != null) {
+                data.message_id = this.message_id;
+            }
+            if (this.error != null) {
+                data.error = this.error;
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.has_message_id)
+                writer.writeInt64(1, this.message_id);
+            if (this.has_error)
+                writer.writeEnum(2, this.error);
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): Ack {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new Ack();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        message.message_id = reader.readInt64();
+                        break;
+                    case 2:
+                        message.error = reader.readEnum();
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): Ack {
+            return Ack.deserialize(bytes);
+        }
+    }
+    export namespace Ack {
+        export enum Error {
+            UNAUTHENTICATED = 0,
+            INVALID_SIGNATURE = 1,
+            SERVER_ERROR = 2,
+            UNKNOWN_IDENTITY = 3
+        }
+    }
+    export class ClientboundMessage extends pb_1.Message {
         #one_of_decls: number[][] = [[1, 2, 3]];
         constructor(data?: any[] | ({} & (({
             challenge?: Challenge;
-            challenge_response?: never;
             forward?: never;
+            ack?: never;
         } | {
             challenge?: never;
-            challenge_response?: ChallengeResponse;
-            forward?: never;
-        } | {
-            challenge?: never;
-            challenge_response?: never;
             forward?: Forward;
+            ack?: never;
+        } | {
+            challenge?: never;
+            forward?: never;
+            ack?: Ack;
         })))) {
             super();
             pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
@@ -436,11 +789,11 @@ export namespace websocket {
                 if ("challenge" in data && data.challenge != undefined) {
                     this.challenge = data.challenge;
                 }
-                if ("challenge_response" in data && data.challenge_response != undefined) {
-                    this.challenge_response = data.challenge_response;
-                }
                 if ("forward" in data && data.forward != undefined) {
                     this.forward = data.forward;
+                }
+                if ("ack" in data && data.ack != undefined) {
+                    this.ack = data.ack;
                 }
             }
         }
@@ -451,6 +804,141 @@ export namespace websocket {
             pb_1.Message.setOneofWrapperField(this, 1, this.#one_of_decls[0], value);
         }
         get has_challenge() {
+            return pb_1.Message.getField(this, 1) != null;
+        }
+        get forward() {
+            return pb_1.Message.getWrapperField(this, Forward, 2) as Forward;
+        }
+        set forward(value: Forward) {
+            pb_1.Message.setOneofWrapperField(this, 2, this.#one_of_decls[0], value);
+        }
+        get has_forward() {
+            return pb_1.Message.getField(this, 2) != null;
+        }
+        get ack() {
+            return pb_1.Message.getWrapperField(this, Ack, 3) as Ack;
+        }
+        set ack(value: Ack) {
+            pb_1.Message.setOneofWrapperField(this, 3, this.#one_of_decls[0], value);
+        }
+        get has_ack() {
+            return pb_1.Message.getField(this, 3) != null;
+        }
+        get payload() {
+            const cases: {
+                [index: number]: "none" | "challenge" | "forward" | "ack";
+            } = {
+                0: "none",
+                1: "challenge",
+                2: "forward",
+                3: "ack"
+            };
+            return cases[pb_1.Message.computeOneofCase(this, [1, 2, 3])];
+        }
+        static fromObject(data: {
+            challenge?: ReturnType<typeof Challenge.prototype.toObject>;
+            forward?: ReturnType<typeof Forward.prototype.toObject>;
+            ack?: ReturnType<typeof Ack.prototype.toObject>;
+        }): ClientboundMessage {
+            const message = new ClientboundMessage({});
+            if (data.challenge != null) {
+                message.challenge = Challenge.fromObject(data.challenge);
+            }
+            if (data.forward != null) {
+                message.forward = Forward.fromObject(data.forward);
+            }
+            if (data.ack != null) {
+                message.ack = Ack.fromObject(data.ack);
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                challenge?: ReturnType<typeof Challenge.prototype.toObject>;
+                forward?: ReturnType<typeof Forward.prototype.toObject>;
+                ack?: ReturnType<typeof Ack.prototype.toObject>;
+            } = {};
+            if (this.challenge != null) {
+                data.challenge = this.challenge.toObject();
+            }
+            if (this.forward != null) {
+                data.forward = this.forward.toObject();
+            }
+            if (this.ack != null) {
+                data.ack = this.ack.toObject();
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.has_challenge)
+                writer.writeMessage(1, this.challenge, () => this.challenge.serialize(writer));
+            if (this.has_forward)
+                writer.writeMessage(2, this.forward, () => this.forward.serialize(writer));
+            if (this.has_ack)
+                writer.writeMessage(3, this.ack, () => this.ack.serialize(writer));
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): ClientboundMessage {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new ClientboundMessage();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        reader.readMessage(message.challenge, () => message.challenge = Challenge.deserialize(reader));
+                        break;
+                    case 2:
+                        reader.readMessage(message.forward, () => message.forward = Forward.deserialize(reader));
+                        break;
+                    case 3:
+                        reader.readMessage(message.ack, () => message.ack = Ack.deserialize(reader));
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): ClientboundMessage {
+            return ClientboundMessage.deserialize(bytes);
+        }
+    }
+    export class ServerboundMessage extends pb_1.Message {
+        #one_of_decls: number[][] = [[2, 3]];
+        constructor(data?: any[] | ({
+            id: number;
+        } & (({
+            challenge_response?: ChallengeResponse;
+            forward?: never;
+        } | {
+            challenge_response?: never;
+            forward?: Forward;
+        })))) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                this.id = data.id;
+                if ("challenge_response" in data && data.challenge_response != undefined) {
+                    this.challenge_response = data.challenge_response;
+                }
+                if ("forward" in data && data.forward != undefined) {
+                    this.forward = data.forward;
+                }
+            }
+        }
+        get id() {
+            return pb_1.Message.getField(this, 1) as number;
+        }
+        set id(value: number) {
+            pb_1.Message.setField(this, 1, value);
+        }
+        get has_id() {
             return pb_1.Message.getField(this, 1) != null;
         }
         get challenge_response() {
@@ -473,24 +961,22 @@ export namespace websocket {
         }
         get payload() {
             const cases: {
-                [index: number]: "none" | "challenge" | "challenge_response" | "forward";
+                [index: number]: "none" | "challenge_response" | "forward";
             } = {
                 0: "none",
-                1: "challenge",
                 2: "challenge_response",
                 3: "forward"
             };
-            return cases[pb_1.Message.computeOneofCase(this, [1, 2, 3])];
+            return cases[pb_1.Message.computeOneofCase(this, [2, 3])];
         }
         static fromObject(data: {
-            challenge?: ReturnType<typeof Challenge.prototype.toObject>;
+            id?: number;
             challenge_response?: ReturnType<typeof ChallengeResponse.prototype.toObject>;
             forward?: ReturnType<typeof Forward.prototype.toObject>;
-        }): Envelope {
-            const message = new Envelope({});
-            if (data.challenge != null) {
-                message.challenge = Challenge.fromObject(data.challenge);
-            }
+        }): ServerboundMessage {
+            const message = new ServerboundMessage({
+                id: data.id
+            });
             if (data.challenge_response != null) {
                 message.challenge_response = ChallengeResponse.fromObject(data.challenge_response);
             }
@@ -501,12 +987,12 @@ export namespace websocket {
         }
         toObject() {
             const data: {
-                challenge?: ReturnType<typeof Challenge.prototype.toObject>;
+                id?: number;
                 challenge_response?: ReturnType<typeof ChallengeResponse.prototype.toObject>;
                 forward?: ReturnType<typeof Forward.prototype.toObject>;
             } = {};
-            if (this.challenge != null) {
-                data.challenge = this.challenge.toObject();
+            if (this.id != null) {
+                data.id = this.id;
             }
             if (this.challenge_response != null) {
                 data.challenge_response = this.challenge_response.toObject();
@@ -520,8 +1006,8 @@ export namespace websocket {
         serialize(w: pb_1.BinaryWriter): void;
         serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
             const writer = w || new pb_1.BinaryWriter();
-            if (this.has_challenge)
-                writer.writeMessage(1, this.challenge, () => this.challenge.serialize(writer));
+            if (this.has_id)
+                writer.writeInt64(1, this.id);
             if (this.has_challenge_response)
                 writer.writeMessage(2, this.challenge_response, () => this.challenge_response.serialize(writer));
             if (this.has_forward)
@@ -529,14 +1015,14 @@ export namespace websocket {
             if (!w)
                 return writer.getResultBuffer();
         }
-        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): Envelope {
-            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new Envelope();
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): ServerboundMessage {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new ServerboundMessage();
             while (reader.nextField()) {
                 if (reader.isEndGroup())
                     break;
                 switch (reader.getFieldNumber()) {
                     case 1:
-                        reader.readMessage(message.challenge, () => message.challenge = Challenge.deserialize(reader));
+                        message.id = reader.readInt64();
                         break;
                     case 2:
                         reader.readMessage(message.challenge_response, () => message.challenge_response = ChallengeResponse.deserialize(reader));
@@ -552,8 +1038,8 @@ export namespace websocket {
         serializeBinary(): Uint8Array {
             return this.serialize();
         }
-        static deserializeBinary(bytes: Uint8Array): Envelope {
-            return Envelope.deserialize(bytes);
+        static deserializeBinary(bytes: Uint8Array): ServerboundMessage {
+            return ServerboundMessage.deserialize(bytes);
         }
     }
 }

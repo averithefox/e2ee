@@ -8,7 +8,44 @@
 #include "mongoose.h"
 #include "websocket.pb-c.h"
 
-#define OPK_CNT_WARNING_THRESHOLD 10
+#define SELF -1
+
+#define ERR(CODE)                        \
+  do {                                   \
+    err = WEBSOCKET__ACK__ERROR__##CODE; \
+    goto err;                            \
+  } while (0)
+
+static bool ws_send(struct mg_connection *c,
+                    const Websocket__ClientboundMessage *env, int64_t to_id) {
+  size_t n = websocket__clientbound_message__get_packed_size(env);
+  void *buf = malloc(n);
+  if (!buf) {
+    fprintf(stderr, "[%s:%d] out of memory\n", __func__, __LINE__);
+    return FALSE;
+  }
+  websocket__clientbound_message__pack(env, buf);
+  if (to_id == SELF) {
+    mg_ws_send(c, buf, n, WEBSOCKET_OP_BINARY);
+  } else {
+    ws_send_by_id(c->mgr, to_id, buf, n);
+  }
+  free(buf);
+  return TRUE;
+}
+
+static bool ws_ack(struct mg_connection *c, int64_t message_id,
+                   Websocket__Ack__Error error) {
+  Websocket__Ack ack = WEBSOCKET__ACK__INIT;
+  ack.message_id = message_id;
+  if ((int)error != -1) ack.error = error;
+
+  Websocket__ClientboundMessage env = WEBSOCKET__CLIENTBOUND_MESSAGE__INIT;
+  env.payload_case = WEBSOCKET__CLIENTBOUND_MESSAGE__PAYLOAD_ACK;
+  env.ack = &ack;
+
+  return ws_send(c, &env, SELF);
+}
 
 void handle_ws_upgrade_request(struct mg_connection *c,
                                struct mg_http_message *hm) {
@@ -33,27 +70,18 @@ void handle_ws_open(struct mg_connection *c, struct mg_http_message *hm) {
   ch.nonce.data = ctx->nonce;
   ch.nonce.len = sizeof ctx->nonce;
 
-  Websocket__Envelope env = WEBSOCKET__ENVELOPE__INIT;
-  env.payload_case = WEBSOCKET__ENVELOPE__PAYLOAD_CHALLENGE;
+  Websocket__ClientboundMessage env = WEBSOCKET__CLIENTBOUND_MESSAGE__INIT;
+  env.payload_case = WEBSOCKET__CLIENTBOUND_MESSAGE__PAYLOAD_CHALLENGE;
   env.challenge = &ch;
 
-  size_t n = websocket__envelope__get_packed_size(&env);
-  void *buf = malloc(n);
-  if (!buf) {
-    fprintf(stderr, "[%s:%d] out of memory\n", __func__, __LINE__);
-    goto err;
-  }
-
-  websocket__envelope__pack(&env, buf);
-  mg_ws_send(c, buf, n, WEBSOCKET_OP_BINARY);
-  free(buf);
+  if (!ws_send(c, &env, SELF)) goto err;
   return;
 err:
   c->is_closing = 1;
 }
 
 void handle_ws_message(struct mg_connection *c, struct mg_ws_message *wm) {
-  Websocket__Envelope *env = NULL;
+  Websocket__ServerboundMessage *env = NULL;
 
   uint8_t op = wm->flags & 0x0f;
   if (op != WEBSOCKET_OP_BINARY) {
@@ -68,8 +96,8 @@ void handle_ws_message(struct mg_connection *c, struct mg_ws_message *wm) {
     goto err;
   }
 
-  env =
-      websocket__envelope__unpack(NULL, wm->data.len, (uint8_t *)wm->data.buf);
+  env = websocket__serverbound_message__unpack(NULL, wm->data.len,
+                                               (uint8_t *)wm->data.buf);
   if (!env) {
     fprintf(stderr, "[%s:%d] invalid message\n", __func__, __LINE__);
     if (ctx->id == -1) goto err;
@@ -77,15 +105,18 @@ void handle_ws_message(struct mg_connection *c, struct mg_ws_message *wm) {
   }
 
   if (ctx->id == -1 &&
-      env->payload_case != WEBSOCKET__ENVELOPE__PAYLOAD_CHALLENGE_RESPONSE)
-    goto err;
+      env->payload_case !=
+          WEBSOCKET__SERVERBOUND_MESSAGE__PAYLOAD_CHALLENGE_RESPONSE) {
+    if (!ws_ack(c, env->id, WEBSOCKET__ACK__ERROR__UNAUTHENTICATED)) goto err;
+    goto cleanup;
+  }
 
   switch (env->payload_case) {
-    case WEBSOCKET__ENVELOPE__PAYLOAD_CHALLENGE_RESPONSE:
-      handle_ws_challenge_response_pb(c, env->challenge_response);
+    case WEBSOCKET__SERVERBOUND_MESSAGE__PAYLOAD_CHALLENGE_RESPONSE:
+      handle_ws_challenge_response_pb(c, env->challenge_response, env->id);
       break;
-    case WEBSOCKET__ENVELOPE__PAYLOAD_FORWARD:
-      handle_ws_forward_pb(c, env->forward);
+    case WEBSOCKET__SERVERBOUND_MESSAGE__PAYLOAD_FORWARD:
+      handle_ws_forward_pb(c, env->forward, env->id);
       break;
     default:
       break;
@@ -93,18 +124,20 @@ void handle_ws_message(struct mg_connection *c, struct mg_ws_message *wm) {
 
   goto cleanup;
 err:
-  c->is_closing = 1;
+  c->is_draining = 1;
 cleanup:
-  if (env) websocket__envelope__free_unpacked(env, NULL);
+  if (env) websocket__serverbound_message__free_unpacked(env, NULL);
 }
 
 void handle_ws_challenge_response_pb(struct mg_connection *c,
-                                     Websocket__ChallengeResponse *msg) {
+                                     Websocket__ChallengeResponse *msg,
+                                     int64_t msg_id) {
+  Websocket__Ack__Error err = -1;
   sqlite3_stmt *stmt = NULL;
 
   if (msg->signature.len != XEDDSA_SIGNATURE_LENGTH) {
     fprintf(stderr, "[%s:%d] invalid signature\n", __func__, __LINE__);
-    goto err;
+    ERR(INVALID_SIGNATURE);
   }
 
   int rc;
@@ -113,14 +146,14 @@ void handle_ws_challenge_response_pb(struct mg_connection *c,
                                -1, 0, &stmt, NULL)) != SQLITE_OK) {
     fprintf(stderr, "[%s:%d] prepare failed: %d (%s)\n", __func__, __LINE__, rc,
             sqlite3_errmsg(db));
-    goto err;
+    ERR(SERVER_ERROR);
   }
 
   if ((rc = sqlite3_bind_text(stmt, 1, msg->handle, -1, SQLITE_STATIC)) !=
       SQLITE_OK) {
     fprintf(stderr, "[%s:%d] bind failed: %d (%s)\n", __func__, __LINE__, rc,
             sqlite3_errmsg(db));
-    goto err;
+    ERR(SERVER_ERROR);
   }
 
   switch (rc = sqlite3_step(stmt)) {
@@ -128,12 +161,12 @@ void handle_ws_challenge_response_pb(struct mg_connection *c,
       break;
     case SQLITE_DONE: {
       fprintf(stderr, "[%s:%d] unknown identity\n", __func__, __LINE__);
-      goto err;
+      ERR(UNKNOWN_IDENTITY);
     }
     default: {
       fprintf(stderr, "[%s:%d] step failed: %d (%s)\n", __func__, __LINE__, rc,
               sqlite3_errmsg(db));
-      goto err;
+      ERR(SERVER_ERROR);
     }
   }
 
@@ -143,14 +176,14 @@ void handle_ws_challenge_response_pb(struct mg_connection *c,
 
   if (!pk_buf || pk_len != CURVE25519_PUBLIC_KEY_LENGTH) {
     fprintf(stderr, "[%s:%d] invalid public key buffer\n", __func__, __LINE__);
-    goto err;
+    ERR(SERVER_ERROR);
   }
 
   struct ws_ctx *ctx = c->fn_data;
   if (!xeddsa_verify(pk_buf, ctx->nonce, sizeof ctx->nonce,
                      msg->signature.data)) {
     fprintf(stderr, "[%s:%d] invalid signature\n", __func__, __LINE__);
-    goto err;
+    ERR(INVALID_SIGNATURE);
   }
 
   ctx->id = id;
@@ -162,6 +195,7 @@ err:
   c->is_draining = 1;
 cleanup:
   if (stmt) sqlite3_finalize(stmt);
+  ws_ack(c, msg_id, err);
 }
 
 void handle_ws_authenticated(struct mg_connection *c) {
@@ -170,7 +204,6 @@ void handle_ws_authenticated(struct mg_connection *c) {
   struct ws_ctx *ctx = c->fn_data;
   if (!ctx || ctx->id == -1) {
     fprintf(stderr, "[%s:%d] context invalid or missing\n", __func__, __LINE__);
-    c->is_draining = 1;
     goto err;
   }
 
@@ -224,14 +257,15 @@ err:
   if (stmt_delete) sqlite3_finalize(stmt_delete);
 }
 
-void handle_ws_forward_pb(struct mg_connection *c, Websocket__Forward *msg) {
+void handle_ws_forward_pb(struct mg_connection *c, Websocket__Forward *msg,
+                          int64_t msg_id) {
+  Websocket__Ack__Error err = -1;
   sqlite3_stmt *stmt_id_by_handle = NULL, *stmt_handle_by_id = NULL;
 
   struct ws_ctx *ctx = c->fn_data;
   if (!ctx || ctx->id == -1) {
     fprintf(stderr, "[%s:%d] context invalid or missing\n", __func__, __LINE__);
-    c->is_draining = 1;
-    goto err;
+    ERR(SERVER_ERROR);
   }
 
   int rc;
@@ -243,7 +277,7 @@ void handle_ws_forward_pb(struct mg_connection *c, Websocket__Forward *msg) {
                               -1, 0, &stmt_handle_by_id, NULL)) != SQLITE_OK) {
     fprintf(stderr, "[%s:%d] prepare failed: %d (%s)\n", __func__, __LINE__, rc,
             sqlite3_errmsg(db));
-    goto err;
+    ERR(SERVER_ERROR);
   }
 
   if ((rc = sqlite3_bind_text(stmt_id_by_handle, 1, msg->handle, -1,
@@ -251,7 +285,7 @@ void handle_ws_forward_pb(struct mg_connection *c, Websocket__Forward *msg) {
       (rc = sqlite3_bind_int64(stmt_handle_by_id, 1, ctx->id)) != SQLITE_OK) {
     fprintf(stderr, "[%s:%d] bind failed: %d (%s)\n", __func__, __LINE__, rc,
             sqlite3_errmsg(db));
-    goto err;
+    ERR(SERVER_ERROR);
   }
 
   switch (rc = sqlite3_step(stmt_id_by_handle)) {
@@ -259,11 +293,11 @@ void handle_ws_forward_pb(struct mg_connection *c, Websocket__Forward *msg) {
       break;
     case SQLITE_DONE:
       fprintf(stderr, "[%s:%d] unknown identity\n", __func__, __LINE__);
-      goto err;
+      ERR(UNKNOWN_IDENTITY);
     default:
       fprintf(stderr, "[%s:%d] step failed: %d (%s)\n", __func__, __LINE__, rc,
               sqlite3_errmsg(db));
-      goto err;
+      ERR(SERVER_ERROR);
   }
 
   switch (rc = sqlite3_step(stmt_handle_by_id)) {
@@ -271,11 +305,11 @@ void handle_ws_forward_pb(struct mg_connection *c, Websocket__Forward *msg) {
       break;
     case SQLITE_DONE:
       fprintf(stderr, "[%s:%d] unknown identity\n", __func__, __LINE__);
-      goto err;
+      ERR(UNKNOWN_IDENTITY);
     default:
       fprintf(stderr, "[%s:%d] step failed: %d (%s)\n", __func__, __LINE__, rc,
               sqlite3_errmsg(db));
-      goto err;
+      ERR(SERVER_ERROR);
   }
 
   int64_t id = sqlite3_column_int64(stmt_id_by_handle, 0);
@@ -285,20 +319,17 @@ void handle_ws_forward_pb(struct mg_connection *c, Websocket__Forward *msg) {
   forward.handle = handle;
   forward.payload_case = msg->payload_case;
   forward.pqxdh_init = msg->pqxdh_init;
+  forward.message = msg->message;
 
-  size_t n = websocket__forward__get_packed_size(&forward);
-  void *buf = malloc(n);
-  if (!buf) {
-    fprintf(stderr, "[%s:%d] out of memory\n", __func__, __LINE__);
-    goto err;
-  }
-  websocket__forward__pack(&forward, buf);
-  ws_send_by_id(c->mgr, id, buf, n);
-  free(buf);
+  Websocket__ClientboundMessage env = WEBSOCKET__CLIENTBOUND_MESSAGE__INIT;
+  env.payload_case = WEBSOCKET__CLIENTBOUND_MESSAGE__PAYLOAD_FORWARD;
+  env.forward = &forward;
 
+  ws_send(c, &env, id);
 err:
   if (stmt_id_by_handle) sqlite3_finalize(stmt_id_by_handle);
   if (stmt_handle_by_id) sqlite3_finalize(stmt_handle_by_id);
+  ws_ack(c, msg_id, err);
 }
 
 struct mg_connection *find_ws_conn_by_id(struct mg_mgr *mgr, int64_t id) {

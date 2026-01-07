@@ -13,25 +13,58 @@ message ChallengeResponse {
   required bytes signature = 2;
 }
 
+message MessageHeader {
+  required bytes dh_public_key = 1;       // Current DH ratchet public key
+  required uint32 previous_chain_len = 2; // Previous sending chain length
+  required uint32 message_number = 3;     // Message number in current chain
+}
+
+message EncryptedMessage {
+  required MessageHeader header = 1;
+  required bytes ciphertext = 2;
+  required bytes nonce = 3;
+}
+
 message PQXDHInit {
-  required bytes id_key = 1;
-  required bytes ephemeral_key = 2;
-  required bytes pqkem_ciphertext = 3;
-  repeated int64 prekey_ids = 4 [packed=true];
-  required bytes initial_ciphertext = 5;
+  required bytes id_key = 1;                   // Sender's identity key
+  required bytes ephemeral_key = 2;            // Ephemeral X25519 key
+  required bytes pqkem_ciphertext = 3;         // ML-KEM encapsulation ciphertext
+  repeated int64 prekey_ids = 4 [packed=true]; // IDs of prekeys used [SPK, PQKEM, OPK?]
+  required bytes initial_ciphertext = 5;       // First encrypted message
 }
 
 message Forward {
   required string handle = 1;
   oneof payload {
-    PQXDHInit pqxdh_init = 2;
+    PQXDHInit pqxdh_init = 2;     // Session initialization
+    EncryptedMessage message = 3; // Regular encrypted message
   }
 }
 
-message Envelope {
+message Ack {
+  enum Error {
+    UNAUTHENTICATED = 0;
+    INVALID_SIGNATURE = 1;
+    SERVER_ERROR = 2;
+    UNKNOWN_IDENTITY = 3;
+  }
+
+  required int64 message_id = 1;
+  optional Error error = 2;
+}
+
+message ClientboundMessage {
   oneof payload {
-    Challenge challenge = 1; // server -> client
-    ChallengeResponse challenge_response = 2; // client -> server
-    Forward forward = 3; // client -> server -> client
+    Challenge challenge = 1;
+    Forward forward = 2;
+    Ack ack = 3;
+  }
+}
+
+message ServerboundMessage {
+  required int64 id = 1;
+  oneof payload {
+    ChallengeResponse challenge_response = 2;
+    Forward forward = 3;
   }
 }

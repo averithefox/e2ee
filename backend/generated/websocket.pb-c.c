@@ -97,6 +97,96 @@ void   websocket__challenge_response__free_unpacked
   assert(message->base.descriptor == &websocket__challenge_response__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
+void   websocket__message_header__init
+                     (Websocket__MessageHeader         *message)
+{
+  static const Websocket__MessageHeader init_value = WEBSOCKET__MESSAGE_HEADER__INIT;
+  *message = init_value;
+}
+size_t websocket__message_header__get_packed_size
+                     (const Websocket__MessageHeader *message)
+{
+  assert(message->base.descriptor == &websocket__message_header__descriptor);
+  return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
+}
+size_t websocket__message_header__pack
+                     (const Websocket__MessageHeader *message,
+                      uint8_t       *out)
+{
+  assert(message->base.descriptor == &websocket__message_header__descriptor);
+  return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
+}
+size_t websocket__message_header__pack_to_buffer
+                     (const Websocket__MessageHeader *message,
+                      ProtobufCBuffer *buffer)
+{
+  assert(message->base.descriptor == &websocket__message_header__descriptor);
+  return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
+}
+Websocket__MessageHeader *
+       websocket__message_header__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data)
+{
+  return (Websocket__MessageHeader *)
+     protobuf_c_message_unpack (&websocket__message_header__descriptor,
+                                allocator, len, data);
+}
+void   websocket__message_header__free_unpacked
+                     (Websocket__MessageHeader *message,
+                      ProtobufCAllocator *allocator)
+{
+  if(!message)
+    return;
+  assert(message->base.descriptor == &websocket__message_header__descriptor);
+  protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
+}
+void   websocket__encrypted_message__init
+                     (Websocket__EncryptedMessage         *message)
+{
+  static const Websocket__EncryptedMessage init_value = WEBSOCKET__ENCRYPTED_MESSAGE__INIT;
+  *message = init_value;
+}
+size_t websocket__encrypted_message__get_packed_size
+                     (const Websocket__EncryptedMessage *message)
+{
+  assert(message->base.descriptor == &websocket__encrypted_message__descriptor);
+  return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
+}
+size_t websocket__encrypted_message__pack
+                     (const Websocket__EncryptedMessage *message,
+                      uint8_t       *out)
+{
+  assert(message->base.descriptor == &websocket__encrypted_message__descriptor);
+  return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
+}
+size_t websocket__encrypted_message__pack_to_buffer
+                     (const Websocket__EncryptedMessage *message,
+                      ProtobufCBuffer *buffer)
+{
+  assert(message->base.descriptor == &websocket__encrypted_message__descriptor);
+  return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
+}
+Websocket__EncryptedMessage *
+       websocket__encrypted_message__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data)
+{
+  return (Websocket__EncryptedMessage *)
+     protobuf_c_message_unpack (&websocket__encrypted_message__descriptor,
+                                allocator, len, data);
+}
+void   websocket__encrypted_message__free_unpacked
+                     (Websocket__EncryptedMessage *message,
+                      ProtobufCAllocator *allocator)
+{
+  if(!message)
+    return;
+  assert(message->base.descriptor == &websocket__encrypted_message__descriptor);
+  protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
+}
 void   websocket__pqxdhinit__init
                      (Websocket__PQXDHInit         *message)
 {
@@ -187,49 +277,139 @@ void   websocket__forward__free_unpacked
   assert(message->base.descriptor == &websocket__forward__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
-void   websocket__envelope__init
-                     (Websocket__Envelope         *message)
+void   websocket__ack__init
+                     (Websocket__Ack         *message)
 {
-  static const Websocket__Envelope init_value = WEBSOCKET__ENVELOPE__INIT;
+  static const Websocket__Ack init_value = WEBSOCKET__ACK__INIT;
   *message = init_value;
 }
-size_t websocket__envelope__get_packed_size
-                     (const Websocket__Envelope *message)
+size_t websocket__ack__get_packed_size
+                     (const Websocket__Ack *message)
 {
-  assert(message->base.descriptor == &websocket__envelope__descriptor);
+  assert(message->base.descriptor == &websocket__ack__descriptor);
   return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
 }
-size_t websocket__envelope__pack
-                     (const Websocket__Envelope *message,
+size_t websocket__ack__pack
+                     (const Websocket__Ack *message,
                       uint8_t       *out)
 {
-  assert(message->base.descriptor == &websocket__envelope__descriptor);
+  assert(message->base.descriptor == &websocket__ack__descriptor);
   return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
 }
-size_t websocket__envelope__pack_to_buffer
-                     (const Websocket__Envelope *message,
+size_t websocket__ack__pack_to_buffer
+                     (const Websocket__Ack *message,
                       ProtobufCBuffer *buffer)
 {
-  assert(message->base.descriptor == &websocket__envelope__descriptor);
+  assert(message->base.descriptor == &websocket__ack__descriptor);
   return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
 }
-Websocket__Envelope *
-       websocket__envelope__unpack
+Websocket__Ack *
+       websocket__ack__unpack
                      (ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data)
 {
-  return (Websocket__Envelope *)
-     protobuf_c_message_unpack (&websocket__envelope__descriptor,
+  return (Websocket__Ack *)
+     protobuf_c_message_unpack (&websocket__ack__descriptor,
                                 allocator, len, data);
 }
-void   websocket__envelope__free_unpacked
-                     (Websocket__Envelope *message,
+void   websocket__ack__free_unpacked
+                     (Websocket__Ack *message,
                       ProtobufCAllocator *allocator)
 {
   if(!message)
     return;
-  assert(message->base.descriptor == &websocket__envelope__descriptor);
+  assert(message->base.descriptor == &websocket__ack__descriptor);
+  protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
+}
+void   websocket__clientbound_message__init
+                     (Websocket__ClientboundMessage         *message)
+{
+  static const Websocket__ClientboundMessage init_value = WEBSOCKET__CLIENTBOUND_MESSAGE__INIT;
+  *message = init_value;
+}
+size_t websocket__clientbound_message__get_packed_size
+                     (const Websocket__ClientboundMessage *message)
+{
+  assert(message->base.descriptor == &websocket__clientbound_message__descriptor);
+  return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
+}
+size_t websocket__clientbound_message__pack
+                     (const Websocket__ClientboundMessage *message,
+                      uint8_t       *out)
+{
+  assert(message->base.descriptor == &websocket__clientbound_message__descriptor);
+  return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
+}
+size_t websocket__clientbound_message__pack_to_buffer
+                     (const Websocket__ClientboundMessage *message,
+                      ProtobufCBuffer *buffer)
+{
+  assert(message->base.descriptor == &websocket__clientbound_message__descriptor);
+  return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
+}
+Websocket__ClientboundMessage *
+       websocket__clientbound_message__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data)
+{
+  return (Websocket__ClientboundMessage *)
+     protobuf_c_message_unpack (&websocket__clientbound_message__descriptor,
+                                allocator, len, data);
+}
+void   websocket__clientbound_message__free_unpacked
+                     (Websocket__ClientboundMessage *message,
+                      ProtobufCAllocator *allocator)
+{
+  if(!message)
+    return;
+  assert(message->base.descriptor == &websocket__clientbound_message__descriptor);
+  protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
+}
+void   websocket__serverbound_message__init
+                     (Websocket__ServerboundMessage         *message)
+{
+  static const Websocket__ServerboundMessage init_value = WEBSOCKET__SERVERBOUND_MESSAGE__INIT;
+  *message = init_value;
+}
+size_t websocket__serverbound_message__get_packed_size
+                     (const Websocket__ServerboundMessage *message)
+{
+  assert(message->base.descriptor == &websocket__serverbound_message__descriptor);
+  return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
+}
+size_t websocket__serverbound_message__pack
+                     (const Websocket__ServerboundMessage *message,
+                      uint8_t       *out)
+{
+  assert(message->base.descriptor == &websocket__serverbound_message__descriptor);
+  return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
+}
+size_t websocket__serverbound_message__pack_to_buffer
+                     (const Websocket__ServerboundMessage *message,
+                      ProtobufCBuffer *buffer)
+{
+  assert(message->base.descriptor == &websocket__serverbound_message__descriptor);
+  return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
+}
+Websocket__ServerboundMessage *
+       websocket__serverbound_message__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data)
+{
+  return (Websocket__ServerboundMessage *)
+     protobuf_c_message_unpack (&websocket__serverbound_message__descriptor,
+                                allocator, len, data);
+}
+void   websocket__serverbound_message__free_unpacked
+                     (Websocket__ServerboundMessage *message,
+                      ProtobufCAllocator *allocator)
+{
+  if(!message)
+    return;
+  assert(message->base.descriptor == &websocket__serverbound_message__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
 static const ProtobufCFieldDescriptor websocket__challenge__field_descriptors[1] =
@@ -319,6 +499,134 @@ const ProtobufCMessageDescriptor websocket__challenge_response__descriptor =
   websocket__challenge_response__field_indices_by_name,
   1,  websocket__challenge_response__number_ranges,
   (ProtobufCMessageInit) websocket__challenge_response__init,
+  NULL,NULL,NULL    /* reserved[123] */
+};
+static const ProtobufCFieldDescriptor websocket__message_header__field_descriptors[3] =
+{
+  {
+    "dh_public_key",
+    1,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_BYTES,
+    0,   /* quantifier_offset */
+    offsetof(Websocket__MessageHeader, dh_public_key),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "previous_chain_len",
+    2,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_UINT32,
+    0,   /* quantifier_offset */
+    offsetof(Websocket__MessageHeader, previous_chain_len),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "message_number",
+    3,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_UINT32,
+    0,   /* quantifier_offset */
+    offsetof(Websocket__MessageHeader, message_number),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+};
+static const unsigned websocket__message_header__field_indices_by_name[] = {
+  0,   /* field[0] = dh_public_key */
+  2,   /* field[2] = message_number */
+  1,   /* field[1] = previous_chain_len */
+};
+static const ProtobufCIntRange websocket__message_header__number_ranges[1 + 1] =
+{
+  { 1, 0 },
+  { 0, 3 }
+};
+const ProtobufCMessageDescriptor websocket__message_header__descriptor =
+{
+  PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "websocket.MessageHeader",
+  "MessageHeader",
+  "Websocket__MessageHeader",
+  "websocket",
+  sizeof(Websocket__MessageHeader),
+  3,
+  websocket__message_header__field_descriptors,
+  websocket__message_header__field_indices_by_name,
+  1,  websocket__message_header__number_ranges,
+  (ProtobufCMessageInit) websocket__message_header__init,
+  NULL,NULL,NULL    /* reserved[123] */
+};
+static const ProtobufCFieldDescriptor websocket__encrypted_message__field_descriptors[3] =
+{
+  {
+    "header",
+    1,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_MESSAGE,
+    0,   /* quantifier_offset */
+    offsetof(Websocket__EncryptedMessage, header),
+    &websocket__message_header__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "ciphertext",
+    2,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_BYTES,
+    0,   /* quantifier_offset */
+    offsetof(Websocket__EncryptedMessage, ciphertext),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "nonce",
+    3,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_BYTES,
+    0,   /* quantifier_offset */
+    offsetof(Websocket__EncryptedMessage, nonce),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+};
+static const unsigned websocket__encrypted_message__field_indices_by_name[] = {
+  1,   /* field[1] = ciphertext */
+  0,   /* field[0] = header */
+  2,   /* field[2] = nonce */
+};
+static const ProtobufCIntRange websocket__encrypted_message__number_ranges[1 + 1] =
+{
+  { 1, 0 },
+  { 0, 3 }
+};
+const ProtobufCMessageDescriptor websocket__encrypted_message__descriptor =
+{
+  PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "websocket.EncryptedMessage",
+  "EncryptedMessage",
+  "Websocket__EncryptedMessage",
+  "websocket",
+  sizeof(Websocket__EncryptedMessage),
+  3,
+  websocket__encrypted_message__field_descriptors,
+  websocket__encrypted_message__field_indices_by_name,
+  1,  websocket__encrypted_message__number_ranges,
+  (ProtobufCMessageInit) websocket__encrypted_message__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
 static const ProtobufCFieldDescriptor websocket__pqxdhinit__field_descriptors[5] =
@@ -411,7 +719,7 @@ const ProtobufCMessageDescriptor websocket__pqxdhinit__descriptor =
   (ProtobufCMessageInit) websocket__pqxdhinit__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor websocket__forward__field_descriptors[2] =
+static const ProtobufCFieldDescriptor websocket__forward__field_descriptors[3] =
 {
   {
     "handle",
@@ -437,15 +745,28 @@ static const ProtobufCFieldDescriptor websocket__forward__field_descriptors[2] =
     PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "message",
+    3,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_MESSAGE,
+    offsetof(Websocket__Forward, payload_case),
+    offsetof(Websocket__Forward, message),
+    &websocket__encrypted_message__descriptor,
+    NULL,
+    PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned websocket__forward__field_indices_by_name[] = {
   0,   /* field[0] = handle */
+  2,   /* field[2] = message */
   1,   /* field[1] = pqxdh_init */
 };
 static const ProtobufCIntRange websocket__forward__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 2 }
+  { 0, 3 }
 };
 const ProtobufCMessageDescriptor websocket__forward__descriptor =
 {
@@ -455,25 +776,172 @@ const ProtobufCMessageDescriptor websocket__forward__descriptor =
   "Websocket__Forward",
   "websocket",
   sizeof(Websocket__Forward),
-  2,
+  3,
   websocket__forward__field_descriptors,
   websocket__forward__field_indices_by_name,
   1,  websocket__forward__number_ranges,
   (ProtobufCMessageInit) websocket__forward__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor websocket__envelope__field_descriptors[3] =
+static const ProtobufCEnumValue websocket__ack__error__enum_values_by_number[4] =
+{
+  { "UNAUTHENTICATED", "WEBSOCKET__ACK__ERROR__UNAUTHENTICATED", 0 },
+  { "INVALID_SIGNATURE", "WEBSOCKET__ACK__ERROR__INVALID_SIGNATURE", 1 },
+  { "SERVER_ERROR", "WEBSOCKET__ACK__ERROR__SERVER_ERROR", 2 },
+  { "UNKNOWN_IDENTITY", "WEBSOCKET__ACK__ERROR__UNKNOWN_IDENTITY", 3 },
+};
+static const ProtobufCIntRange websocket__ack__error__value_ranges[] = {
+{0, 0},{0, 4}
+};
+static const ProtobufCEnumValueIndex websocket__ack__error__enum_values_by_name[4] =
+{
+  { "INVALID_SIGNATURE", 1 },
+  { "SERVER_ERROR", 2 },
+  { "UNAUTHENTICATED", 0 },
+  { "UNKNOWN_IDENTITY", 3 },
+};
+const ProtobufCEnumDescriptor websocket__ack__error__descriptor =
+{
+  PROTOBUF_C__ENUM_DESCRIPTOR_MAGIC,
+  "websocket.Ack.Error",
+  "Error",
+  "Websocket__Ack__Error",
+  "websocket",
+  4,
+  websocket__ack__error__enum_values_by_number,
+  4,
+  websocket__ack__error__enum_values_by_name,
+  1,
+  websocket__ack__error__value_ranges,
+  NULL,NULL,NULL,NULL   /* reserved[1234] */
+};
+static const ProtobufCFieldDescriptor websocket__ack__field_descriptors[2] =
+{
+  {
+    "message_id",
+    1,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_INT64,
+    0,   /* quantifier_offset */
+    offsetof(Websocket__Ack, message_id),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "error",
+    2,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_ENUM,
+    offsetof(Websocket__Ack, has_error),
+    offsetof(Websocket__Ack, error),
+    &websocket__ack__error__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+};
+static const unsigned websocket__ack__field_indices_by_name[] = {
+  1,   /* field[1] = error */
+  0,   /* field[0] = message_id */
+};
+static const ProtobufCIntRange websocket__ack__number_ranges[1 + 1] =
+{
+  { 1, 0 },
+  { 0, 2 }
+};
+const ProtobufCMessageDescriptor websocket__ack__descriptor =
+{
+  PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "websocket.Ack",
+  "Ack",
+  "Websocket__Ack",
+  "websocket",
+  sizeof(Websocket__Ack),
+  2,
+  websocket__ack__field_descriptors,
+  websocket__ack__field_indices_by_name,
+  1,  websocket__ack__number_ranges,
+  (ProtobufCMessageInit) websocket__ack__init,
+  NULL,NULL,NULL    /* reserved[123] */
+};
+static const ProtobufCFieldDescriptor websocket__clientbound_message__field_descriptors[3] =
 {
   {
     "challenge",
     1,
     PROTOBUF_C_LABEL_OPTIONAL,
     PROTOBUF_C_TYPE_MESSAGE,
-    offsetof(Websocket__Envelope, payload_case),
-    offsetof(Websocket__Envelope, challenge),
+    offsetof(Websocket__ClientboundMessage, payload_case),
+    offsetof(Websocket__ClientboundMessage, challenge),
     &websocket__challenge__descriptor,
     NULL,
     PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "forward",
+    2,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_MESSAGE,
+    offsetof(Websocket__ClientboundMessage, payload_case),
+    offsetof(Websocket__ClientboundMessage, forward),
+    &websocket__forward__descriptor,
+    NULL,
+    PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "ack",
+    3,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_MESSAGE,
+    offsetof(Websocket__ClientboundMessage, payload_case),
+    offsetof(Websocket__ClientboundMessage, ack),
+    &websocket__ack__descriptor,
+    NULL,
+    PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+};
+static const unsigned websocket__clientbound_message__field_indices_by_name[] = {
+  2,   /* field[2] = ack */
+  0,   /* field[0] = challenge */
+  1,   /* field[1] = forward */
+};
+static const ProtobufCIntRange websocket__clientbound_message__number_ranges[1 + 1] =
+{
+  { 1, 0 },
+  { 0, 3 }
+};
+const ProtobufCMessageDescriptor websocket__clientbound_message__descriptor =
+{
+  PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "websocket.ClientboundMessage",
+  "ClientboundMessage",
+  "Websocket__ClientboundMessage",
+  "websocket",
+  sizeof(Websocket__ClientboundMessage),
+  3,
+  websocket__clientbound_message__field_descriptors,
+  websocket__clientbound_message__field_indices_by_name,
+  1,  websocket__clientbound_message__number_ranges,
+  (ProtobufCMessageInit) websocket__clientbound_message__init,
+  NULL,NULL,NULL    /* reserved[123] */
+};
+static const ProtobufCFieldDescriptor websocket__serverbound_message__field_descriptors[3] =
+{
+  {
+    "id",
+    1,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_INT64,
+    0,   /* quantifier_offset */
+    offsetof(Websocket__ServerboundMessage, id),
+    NULL,
+    NULL,
+    0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
@@ -481,8 +949,8 @@ static const ProtobufCFieldDescriptor websocket__envelope__field_descriptors[3] 
     2,
     PROTOBUF_C_LABEL_OPTIONAL,
     PROTOBUF_C_TYPE_MESSAGE,
-    offsetof(Websocket__Envelope, payload_case),
-    offsetof(Websocket__Envelope, challenge_response),
+    offsetof(Websocket__ServerboundMessage, payload_case),
+    offsetof(Websocket__ServerboundMessage, challenge_response),
     &websocket__challenge_response__descriptor,
     NULL,
     PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
@@ -493,36 +961,36 @@ static const ProtobufCFieldDescriptor websocket__envelope__field_descriptors[3] 
     3,
     PROTOBUF_C_LABEL_OPTIONAL,
     PROTOBUF_C_TYPE_MESSAGE,
-    offsetof(Websocket__Envelope, payload_case),
-    offsetof(Websocket__Envelope, forward),
+    offsetof(Websocket__ServerboundMessage, payload_case),
+    offsetof(Websocket__ServerboundMessage, forward),
     &websocket__forward__descriptor,
     NULL,
     PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
 };
-static const unsigned websocket__envelope__field_indices_by_name[] = {
-  0,   /* field[0] = challenge */
+static const unsigned websocket__serverbound_message__field_indices_by_name[] = {
   1,   /* field[1] = challenge_response */
   2,   /* field[2] = forward */
+  0,   /* field[0] = id */
 };
-static const ProtobufCIntRange websocket__envelope__number_ranges[1 + 1] =
+static const ProtobufCIntRange websocket__serverbound_message__number_ranges[1 + 1] =
 {
   { 1, 0 },
   { 0, 3 }
 };
-const ProtobufCMessageDescriptor websocket__envelope__descriptor =
+const ProtobufCMessageDescriptor websocket__serverbound_message__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
-  "websocket.Envelope",
-  "Envelope",
-  "Websocket__Envelope",
+  "websocket.ServerboundMessage",
+  "ServerboundMessage",
+  "Websocket__ServerboundMessage",
   "websocket",
-  sizeof(Websocket__Envelope),
+  sizeof(Websocket__ServerboundMessage),
   3,
-  websocket__envelope__field_descriptors,
-  websocket__envelope__field_indices_by_name,
-  1,  websocket__envelope__number_ranges,
-  (ProtobufCMessageInit) websocket__envelope__init,
+  websocket__serverbound_message__field_descriptors,
+  websocket__serverbound_message__field_indices_by_name,
+  1,  websocket__serverbound_message__number_ranges,
+  (ProtobufCMessageInit) websocket__serverbound_message__init,
   NULL,NULL,NULL    /* reserved[123] */
 };

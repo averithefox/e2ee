@@ -17,13 +17,24 @@ PROTOBUF_C__BEGIN_DECLS
 
 typedef struct Websocket__Challenge Websocket__Challenge;
 typedef struct Websocket__ChallengeResponse Websocket__ChallengeResponse;
+typedef struct Websocket__MessageHeader Websocket__MessageHeader;
+typedef struct Websocket__EncryptedMessage Websocket__EncryptedMessage;
 typedef struct Websocket__PQXDHInit Websocket__PQXDHInit;
 typedef struct Websocket__Forward Websocket__Forward;
-typedef struct Websocket__Envelope Websocket__Envelope;
+typedef struct Websocket__Ack Websocket__Ack;
+typedef struct Websocket__ClientboundMessage Websocket__ClientboundMessage;
+typedef struct Websocket__ServerboundMessage Websocket__ServerboundMessage;
 
 
 /* --- enums --- */
 
+typedef enum _Websocket__Ack__Error {
+  WEBSOCKET__ACK__ERROR__UNAUTHENTICATED = 0,
+  WEBSOCKET__ACK__ERROR__INVALID_SIGNATURE = 1,
+  WEBSOCKET__ACK__ERROR__SERVER_ERROR = 2,
+  WEBSOCKET__ACK__ERROR__UNKNOWN_IDENTITY = 3
+    PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(WEBSOCKET__ACK__ERROR)
+} Websocket__Ack__Error;
 
 /* --- messages --- */
 
@@ -48,14 +59,62 @@ struct  Websocket__ChallengeResponse
 , NULL, {0,NULL} }
 
 
+struct  Websocket__MessageHeader
+{
+  ProtobufCMessage base;
+  /*
+   * Current DH ratchet public key
+   */
+  ProtobufCBinaryData dh_public_key;
+  /*
+   * Previous sending chain length
+   */
+  uint32_t previous_chain_len;
+  /*
+   * Message number in current chain
+   */
+  uint32_t message_number;
+};
+#define WEBSOCKET__MESSAGE_HEADER__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&websocket__message_header__descriptor) \
+, {0,NULL}, 0, 0 }
+
+
+struct  Websocket__EncryptedMessage
+{
+  ProtobufCMessage base;
+  Websocket__MessageHeader *header;
+  ProtobufCBinaryData ciphertext;
+  ProtobufCBinaryData nonce;
+};
+#define WEBSOCKET__ENCRYPTED_MESSAGE__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&websocket__encrypted_message__descriptor) \
+, NULL, {0,NULL}, {0,NULL} }
+
+
 struct  Websocket__PQXDHInit
 {
   ProtobufCMessage base;
+  /*
+   * Sender's identity key
+   */
   ProtobufCBinaryData id_key;
+  /*
+   * Ephemeral X25519 key
+   */
   ProtobufCBinaryData ephemeral_key;
+  /*
+   * ML-KEM encapsulation ciphertext
+   */
   ProtobufCBinaryData pqkem_ciphertext;
+  /*
+   * IDs of prekeys used [SPK, PQKEM, OPK?]
+   */
   size_t n_prekey_ids;
   int64_t *prekey_ids;
+  /*
+   * First encrypted message
+   */
   ProtobufCBinaryData initial_ciphertext;
 };
 #define WEBSOCKET__PQXDHINIT__INIT \
@@ -65,7 +124,8 @@ struct  Websocket__PQXDHInit
 
 typedef enum {
   WEBSOCKET__FORWARD__PAYLOAD__NOT_SET = 0,
-  WEBSOCKET__FORWARD__PAYLOAD_PQXDH_INIT = 2
+  WEBSOCKET__FORWARD__PAYLOAD_PQXDH_INIT = 2,
+  WEBSOCKET__FORWARD__PAYLOAD_MESSAGE = 3
     PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(WEBSOCKET__FORWARD__PAYLOAD__CASE)
 } Websocket__Forward__PayloadCase;
 
@@ -75,6 +135,13 @@ struct  Websocket__Forward
   char *handle;
   Websocket__Forward__PayloadCase payload_case;
   union {
+    /*
+     * Regular encrypted message
+     */
+    Websocket__EncryptedMessage *message;
+    /*
+     * Session initialization
+     */
     Websocket__PQXDHInit *pqxdh_init;
   };
 };
@@ -83,36 +150,61 @@ struct  Websocket__Forward
 , NULL, WEBSOCKET__FORWARD__PAYLOAD__NOT_SET, {0} }
 
 
-typedef enum {
-  WEBSOCKET__ENVELOPE__PAYLOAD__NOT_SET = 0,
-  WEBSOCKET__ENVELOPE__PAYLOAD_CHALLENGE = 1,
-  WEBSOCKET__ENVELOPE__PAYLOAD_CHALLENGE_RESPONSE = 2,
-  WEBSOCKET__ENVELOPE__PAYLOAD_FORWARD = 3
-    PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(WEBSOCKET__ENVELOPE__PAYLOAD__CASE)
-} Websocket__Envelope__PayloadCase;
-
-struct  Websocket__Envelope
+struct  Websocket__Ack
 {
   ProtobufCMessage base;
-  Websocket__Envelope__PayloadCase payload_case;
+  int64_t message_id;
+  protobuf_c_boolean has_error;
+  Websocket__Ack__Error error;
+};
+#define WEBSOCKET__ACK__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&websocket__ack__descriptor) \
+, 0, 0, WEBSOCKET__ACK__ERROR__UNAUTHENTICATED }
+
+
+typedef enum {
+  WEBSOCKET__CLIENTBOUND_MESSAGE__PAYLOAD__NOT_SET = 0,
+  WEBSOCKET__CLIENTBOUND_MESSAGE__PAYLOAD_CHALLENGE = 1,
+  WEBSOCKET__CLIENTBOUND_MESSAGE__PAYLOAD_FORWARD = 2,
+  WEBSOCKET__CLIENTBOUND_MESSAGE__PAYLOAD_ACK = 3
+    PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(WEBSOCKET__CLIENTBOUND_MESSAGE__PAYLOAD__CASE)
+} Websocket__ClientboundMessage__PayloadCase;
+
+struct  Websocket__ClientboundMessage
+{
+  ProtobufCMessage base;
+  Websocket__ClientboundMessage__PayloadCase payload_case;
   union {
-    /*
-     * server -> client
-     */
+    Websocket__Ack *ack;
     Websocket__Challenge *challenge;
-    /*
-     * client -> server
-     */
-    Websocket__ChallengeResponse *challenge_response;
-    /*
-     * client -> server -> client
-     */
     Websocket__Forward *forward;
   };
 };
-#define WEBSOCKET__ENVELOPE__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&websocket__envelope__descriptor) \
-, WEBSOCKET__ENVELOPE__PAYLOAD__NOT_SET, {0} }
+#define WEBSOCKET__CLIENTBOUND_MESSAGE__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&websocket__clientbound_message__descriptor) \
+, WEBSOCKET__CLIENTBOUND_MESSAGE__PAYLOAD__NOT_SET, {0} }
+
+
+typedef enum {
+  WEBSOCKET__SERVERBOUND_MESSAGE__PAYLOAD__NOT_SET = 0,
+  WEBSOCKET__SERVERBOUND_MESSAGE__PAYLOAD_CHALLENGE_RESPONSE = 2,
+  WEBSOCKET__SERVERBOUND_MESSAGE__PAYLOAD_FORWARD = 3
+    PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(WEBSOCKET__SERVERBOUND_MESSAGE__PAYLOAD__CASE)
+} Websocket__ServerboundMessage__PayloadCase;
+
+struct  Websocket__ServerboundMessage
+{
+  ProtobufCMessage base;
+  int64_t id;
+  Websocket__ServerboundMessage__PayloadCase payload_case;
+  union {
+    Websocket__ChallengeResponse *challenge_response;
+    Websocket__Forward *forward;
+  };
+};
+#define WEBSOCKET__SERVERBOUND_MESSAGE__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&websocket__serverbound_message__descriptor) \
+, 0, WEBSOCKET__SERVERBOUND_MESSAGE__PAYLOAD__NOT_SET, {0} }
 
 
 /* Websocket__Challenge methods */
@@ -153,6 +245,44 @@ Websocket__ChallengeResponse *
 void   websocket__challenge_response__free_unpacked
                      (Websocket__ChallengeResponse *message,
                       ProtobufCAllocator *allocator);
+/* Websocket__MessageHeader methods */
+void   websocket__message_header__init
+                     (Websocket__MessageHeader         *message);
+size_t websocket__message_header__get_packed_size
+                     (const Websocket__MessageHeader   *message);
+size_t websocket__message_header__pack
+                     (const Websocket__MessageHeader   *message,
+                      uint8_t             *out);
+size_t websocket__message_header__pack_to_buffer
+                     (const Websocket__MessageHeader   *message,
+                      ProtobufCBuffer     *buffer);
+Websocket__MessageHeader *
+       websocket__message_header__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   websocket__message_header__free_unpacked
+                     (Websocket__MessageHeader *message,
+                      ProtobufCAllocator *allocator);
+/* Websocket__EncryptedMessage methods */
+void   websocket__encrypted_message__init
+                     (Websocket__EncryptedMessage         *message);
+size_t websocket__encrypted_message__get_packed_size
+                     (const Websocket__EncryptedMessage   *message);
+size_t websocket__encrypted_message__pack
+                     (const Websocket__EncryptedMessage   *message,
+                      uint8_t             *out);
+size_t websocket__encrypted_message__pack_to_buffer
+                     (const Websocket__EncryptedMessage   *message,
+                      ProtobufCBuffer     *buffer);
+Websocket__EncryptedMessage *
+       websocket__encrypted_message__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   websocket__encrypted_message__free_unpacked
+                     (Websocket__EncryptedMessage *message,
+                      ProtobufCAllocator *allocator);
 /* Websocket__PQXDHInit methods */
 void   websocket__pqxdhinit__init
                      (Websocket__PQXDHInit         *message);
@@ -191,24 +321,62 @@ Websocket__Forward *
 void   websocket__forward__free_unpacked
                      (Websocket__Forward *message,
                       ProtobufCAllocator *allocator);
-/* Websocket__Envelope methods */
-void   websocket__envelope__init
-                     (Websocket__Envelope         *message);
-size_t websocket__envelope__get_packed_size
-                     (const Websocket__Envelope   *message);
-size_t websocket__envelope__pack
-                     (const Websocket__Envelope   *message,
+/* Websocket__Ack methods */
+void   websocket__ack__init
+                     (Websocket__Ack         *message);
+size_t websocket__ack__get_packed_size
+                     (const Websocket__Ack   *message);
+size_t websocket__ack__pack
+                     (const Websocket__Ack   *message,
                       uint8_t             *out);
-size_t websocket__envelope__pack_to_buffer
-                     (const Websocket__Envelope   *message,
+size_t websocket__ack__pack_to_buffer
+                     (const Websocket__Ack   *message,
                       ProtobufCBuffer     *buffer);
-Websocket__Envelope *
-       websocket__envelope__unpack
+Websocket__Ack *
+       websocket__ack__unpack
                      (ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data);
-void   websocket__envelope__free_unpacked
-                     (Websocket__Envelope *message,
+void   websocket__ack__free_unpacked
+                     (Websocket__Ack *message,
+                      ProtobufCAllocator *allocator);
+/* Websocket__ClientboundMessage methods */
+void   websocket__clientbound_message__init
+                     (Websocket__ClientboundMessage         *message);
+size_t websocket__clientbound_message__get_packed_size
+                     (const Websocket__ClientboundMessage   *message);
+size_t websocket__clientbound_message__pack
+                     (const Websocket__ClientboundMessage   *message,
+                      uint8_t             *out);
+size_t websocket__clientbound_message__pack_to_buffer
+                     (const Websocket__ClientboundMessage   *message,
+                      ProtobufCBuffer     *buffer);
+Websocket__ClientboundMessage *
+       websocket__clientbound_message__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   websocket__clientbound_message__free_unpacked
+                     (Websocket__ClientboundMessage *message,
+                      ProtobufCAllocator *allocator);
+/* Websocket__ServerboundMessage methods */
+void   websocket__serverbound_message__init
+                     (Websocket__ServerboundMessage         *message);
+size_t websocket__serverbound_message__get_packed_size
+                     (const Websocket__ServerboundMessage   *message);
+size_t websocket__serverbound_message__pack
+                     (const Websocket__ServerboundMessage   *message,
+                      uint8_t             *out);
+size_t websocket__serverbound_message__pack_to_buffer
+                     (const Websocket__ServerboundMessage   *message,
+                      ProtobufCBuffer     *buffer);
+Websocket__ServerboundMessage *
+       websocket__serverbound_message__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   websocket__serverbound_message__free_unpacked
+                     (Websocket__ServerboundMessage *message,
                       ProtobufCAllocator *allocator);
 /* --- per-message closures --- */
 
@@ -218,14 +386,26 @@ typedef void (*Websocket__Challenge_Closure)
 typedef void (*Websocket__ChallengeResponse_Closure)
                  (const Websocket__ChallengeResponse *message,
                   void *closure_data);
+typedef void (*Websocket__MessageHeader_Closure)
+                 (const Websocket__MessageHeader *message,
+                  void *closure_data);
+typedef void (*Websocket__EncryptedMessage_Closure)
+                 (const Websocket__EncryptedMessage *message,
+                  void *closure_data);
 typedef void (*Websocket__PQXDHInit_Closure)
                  (const Websocket__PQXDHInit *message,
                   void *closure_data);
 typedef void (*Websocket__Forward_Closure)
                  (const Websocket__Forward *message,
                   void *closure_data);
-typedef void (*Websocket__Envelope_Closure)
-                 (const Websocket__Envelope *message,
+typedef void (*Websocket__Ack_Closure)
+                 (const Websocket__Ack *message,
+                  void *closure_data);
+typedef void (*Websocket__ClientboundMessage_Closure)
+                 (const Websocket__ClientboundMessage *message,
+                  void *closure_data);
+typedef void (*Websocket__ServerboundMessage_Closure)
+                 (const Websocket__ServerboundMessage *message,
                   void *closure_data);
 
 /* --- services --- */
@@ -235,9 +415,14 @@ typedef void (*Websocket__Envelope_Closure)
 
 extern const ProtobufCMessageDescriptor websocket__challenge__descriptor;
 extern const ProtobufCMessageDescriptor websocket__challenge_response__descriptor;
+extern const ProtobufCMessageDescriptor websocket__message_header__descriptor;
+extern const ProtobufCMessageDescriptor websocket__encrypted_message__descriptor;
 extern const ProtobufCMessageDescriptor websocket__pqxdhinit__descriptor;
 extern const ProtobufCMessageDescriptor websocket__forward__descriptor;
-extern const ProtobufCMessageDescriptor websocket__envelope__descriptor;
+extern const ProtobufCMessageDescriptor websocket__ack__descriptor;
+extern const ProtobufCEnumDescriptor    websocket__ack__error__descriptor;
+extern const ProtobufCMessageDescriptor websocket__clientbound_message__descriptor;
+extern const ProtobufCMessageDescriptor websocket__serverbound_message__descriptor;
 
 PROTOBUF_C__END_DECLS
 
