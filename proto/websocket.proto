@@ -47,6 +47,7 @@ message Ack {
     INVALID_SIGNATURE = 1;
     SERVER_ERROR = 2;
     UNKNOWN_IDENTITY = 3;
+    INVALID_MESSAGE = 4;
   }
 
   required int64 message_id = 1;

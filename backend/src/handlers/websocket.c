@@ -325,8 +325,17 @@ void handle_ws_forward_pb(struct mg_connection *c, Websocket__Forward *msg,
   Websocket__Forward forward = WEBSOCKET__FORWARD__INIT;
   forward.handle = handle;
   forward.payload_case = msg->payload_case;
-  forward.pqxdh_init = msg->pqxdh_init;
-  forward.message = msg->message;
+  switch (forward.payload_case) {
+    case WEBSOCKET__FORWARD__PAYLOAD_PQXDH_INIT:
+      forward.pqxdh_init = msg->pqxdh_init;
+      break;
+    case WEBSOCKET__FORWARD__PAYLOAD_MESSAGE:
+      forward.message = msg->message;
+      break;
+    case WEBSOCKET__FORWARD__PAYLOAD__NOT_SET:
+    case _WEBSOCKET__FORWARD__PAYLOAD__CASE_IS_INT_SIZE:
+      ERR(INVALID_MESSAGE);
+  }
 
   Websocket__ClientboundMessage env = WEBSOCKET__CLIENTBOUND_MESSAGE__INIT;
   env.payload_case = WEBSOCKET__CLIENTBOUND_MESSAGE__PAYLOAD_FORWARD;

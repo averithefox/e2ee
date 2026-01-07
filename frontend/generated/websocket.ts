@@ -765,7 +765,8 @@ export namespace websocket {
             UNAUTHENTICATED = 0,
             INVALID_SIGNATURE = 1,
             SERVER_ERROR = 2,
-            UNKNOWN_IDENTITY = 3
+            UNKNOWN_IDENTITY = 3,
+            INVALID_MESSAGE = 4
         }
     }
     export class ClientboundMessage extends pb_1.Message {

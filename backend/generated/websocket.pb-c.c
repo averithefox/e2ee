@@ -783,18 +783,20 @@ const ProtobufCMessageDescriptor websocket__forward__descriptor =
   (ProtobufCMessageInit) websocket__forward__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCEnumValue websocket__ack__error__enum_values_by_number[4] =
+static const ProtobufCEnumValue websocket__ack__error__enum_values_by_number[5] =
 {
   { "UNAUTHENTICATED", "WEBSOCKET__ACK__ERROR__UNAUTHENTICATED", 0 },
   { "INVALID_SIGNATURE", "WEBSOCKET__ACK__ERROR__INVALID_SIGNATURE", 1 },
   { "SERVER_ERROR", "WEBSOCKET__ACK__ERROR__SERVER_ERROR", 2 },
   { "UNKNOWN_IDENTITY", "WEBSOCKET__ACK__ERROR__UNKNOWN_IDENTITY", 3 },
+  { "INVALID_MESSAGE", "WEBSOCKET__ACK__ERROR__INVALID_MESSAGE", 4 },
 };
 static const ProtobufCIntRange websocket__ack__error__value_ranges[] = {
-{0, 0},{0, 4}
+{0, 0},{0, 5}
 };
-static const ProtobufCEnumValueIndex websocket__ack__error__enum_values_by_name[4] =
+static const ProtobufCEnumValueIndex websocket__ack__error__enum_values_by_name[5] =
 {
+  { "INVALID_MESSAGE", 4 },
   { "INVALID_SIGNATURE", 1 },
   { "SERVER_ERROR", 2 },
   { "UNAUTHENTICATED", 0 },
@@ -807,9 +809,9 @@ const ProtobufCEnumDescriptor websocket__ack__error__descriptor =
   "Error",
   "Websocket__Ack__Error",
   "websocket",
-  4,
+  5,
   websocket__ack__error__enum_values_by_number,
-  4,
+  5,
   websocket__ack__error__enum_values_by_name,
   1,
   websocket__ack__error__value_ranges,
