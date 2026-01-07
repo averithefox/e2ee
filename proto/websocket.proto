@@ -13,16 +13,25 @@ message ChallengeResponse {
   required bytes signature = 2;
 }
 
-message KeysUsed {
-  repeated int64 ids = 1 [packed = true];
-  required int64 opks_remaining = 2;
-  required int64 pqopks_remaining = 3;
+message PQXDHInit {
+  required bytes id_key = 1;
+  required bytes ephemeral_key = 2;
+  required bytes pqkem_ciphertext = 3;
+  repeated int64 prekey_ids = 4 [packed=true];
+  required bytes initial_ciphertext = 5;
+}
+
+message Forward {
+  required string handle = 1;
+  oneof payload {
+    PQXDHInit pqxdh_init = 2;
+  }
 }
 
 message Envelope {
   oneof payload {
     Challenge challenge = 1; // server -> client
     ChallengeResponse challenge_response = 2; // client -> server
-    KeysUsed keys_used = 3; // server -> client
+    Forward forward = 3; // client -> server -> client
   }
 }

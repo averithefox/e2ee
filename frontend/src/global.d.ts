@@ -1,5 +1,3 @@
-export {};
-
 declare global {
   type TypedArray =
     | Int8Array
@@ -13,12 +11,12 @@ declare global {
     | Float64Array
     | BigInt64Array
     | BigUint64Array;
-
   interface RequestInit {
     body?: BodyInit | TypedArray | null;
   }
-
   interface BunFetchRequestInit {
     body?: BodyInit | TypedArray | null;
   }
 }
+
+export {};

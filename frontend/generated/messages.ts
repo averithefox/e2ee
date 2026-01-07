@@ -516,7 +516,6 @@ export namespace messages {
     export class IdentityPatch extends pb_1.Message {
         #one_of_decls: number[][] = [];
         constructor(data?: any[] | {
-            handle?: string;
             prekey?: SignedPrekey;
             pqkem_prekey?: SignedPrekey;
             one_time_pqkem_prekeys: SignedPrekey[];
@@ -525,9 +524,6 @@ export namespace messages {
             super();
             pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [4, 5], this.#one_of_decls);
             if (!Array.isArray(data) && typeof data == "object") {
-                if ("handle" in data && data.handle != undefined) {
-                    this.handle = data.handle;
-                }
                 if ("prekey" in data && data.prekey != undefined) {
                     this.prekey = data.prekey;
                 }
@@ -537,15 +533,6 @@ export namespace messages {
                 this.one_time_pqkem_prekeys = data.one_time_pqkem_prekeys;
                 this.one_time_prekeys = data.one_time_prekeys;
             }
-        }
-        get handle() {
-            return pb_1.Message.getFieldWithDefault(this, 1, "") as string;
-        }
-        set handle(value: string) {
-            pb_1.Message.setField(this, 1, value);
-        }
-        get has_handle() {
-            return pb_1.Message.getField(this, 1) != null;
         }
         get prekey() {
             return pb_1.Message.getWrapperField(this, SignedPrekey, 2) as SignedPrekey;
@@ -578,7 +565,6 @@ export namespace messages {
             pb_1.Message.setRepeatedWrapperField(this, 5, value);
         }
         static fromObject(data: {
-            handle?: string;
             prekey?: ReturnType<typeof SignedPrekey.prototype.toObject>;
             pqkem_prekey?: ReturnType<typeof SignedPrekey.prototype.toObject>;
             one_time_pqkem_prekeys?: ReturnType<typeof SignedPrekey.prototype.toObject>[];
@@ -588,9 +574,6 @@ export namespace messages {
                 one_time_pqkem_prekeys: data.one_time_pqkem_prekeys.map(item => SignedPrekey.fromObject(item)),
                 one_time_prekeys: data.one_time_prekeys.map(item => Prekey.fromObject(item))
             });
-            if (data.handle != null) {
-                message.handle = data.handle;
-            }
             if (data.prekey != null) {
                 message.prekey = SignedPrekey.fromObject(data.prekey);
             }
@@ -601,15 +584,11 @@ export namespace messages {
         }
         toObject() {
             const data: {
-                handle?: string;
                 prekey?: ReturnType<typeof SignedPrekey.prototype.toObject>;
                 pqkem_prekey?: ReturnType<typeof SignedPrekey.prototype.toObject>;
                 one_time_pqkem_prekeys?: ReturnType<typeof SignedPrekey.prototype.toObject>[];
                 one_time_prekeys?: ReturnType<typeof Prekey.prototype.toObject>[];
             } = {};
-            if (this.handle != null) {
-                data.handle = this.handle;
-            }
             if (this.prekey != null) {
                 data.prekey = this.prekey.toObject();
             }
@@ -628,8 +607,6 @@ export namespace messages {
         serialize(w: pb_1.BinaryWriter): void;
         serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
             const writer = w || new pb_1.BinaryWriter();
-            if (this.has_handle && this.handle.length)
-                writer.writeString(1, this.handle);
             if (this.has_prekey)
                 writer.writeMessage(2, this.prekey, () => this.prekey.serialize(writer));
             if (this.has_pqkem_prekey)
@@ -647,9 +624,6 @@ export namespace messages {
                 if (reader.isEndGroup())
                     break;
                 switch (reader.getFieldNumber()) {
-                    case 1:
-                        message.handle = reader.readString();
-                        break;
                     case 2:
                         reader.readMessage(message.prekey, () => message.prekey = SignedPrekey.deserialize(reader));
                         break;

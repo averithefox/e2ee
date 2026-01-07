@@ -22,25 +22,29 @@ static const char *s_sql =
   "create table if not exists pqopks(" // signed one-time pqkem prekeys
     "uid integer primary key autoincrement,"
     "id integer not null,"
-    "used integer not null default 0,"
     "for integer not null,"
     "bytes blob not null,"
     "sig blob not null, "
     "foreign key (for) references identities(id) on delete cascade"
   ");"
-  "create index if not exists idx_pqopks_used_for on pqopks(used, for);"
   "create index if not exists idx_pqopks_id on pqopks(id);"
 
   "create table if not exists opks(" // one-time prekeys
     "uid integer primary key autoincrement,"
     "id integer not null,"
-    "used integer not null default 0,"
     "for integer not null,"
     "bytes blob not null,"
     "foreign key (for) references identities(id) on delete cascade"
   ");"
-  "create index if not exists idx_opks_used_for on opks(used, for);"
-  "create index if not exists idx_opks_id on opks(id);";
+  "create index if not exists idx_opks_id on opks(id);"
+
+  "create table if not exists queue("
+    "id integer primary key autoincrement,"
+    "for integer not null,"
+    "msg blob not null,"
+    "created_at integer not null default (strftime('%s','now')),"
+    "foreign key (for) references identities(id) on delete cascade"
+  ");";
 // clang-format on
 
 sqlite3 *db = NULL;

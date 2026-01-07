@@ -161,70 +161,104 @@ export namespace websocket {
             return ChallengeResponse.deserialize(bytes);
         }
     }
-    export class KeysUsed extends pb_1.Message {
+    export class PQXDHInit extends pb_1.Message {
         #one_of_decls: number[][] = [];
         constructor(data?: any[] | {
-            ids: number[];
-            opks_remaining: number;
-            pqopks_remaining: number;
+            id_key: Uint8Array;
+            ephemeral_key: Uint8Array;
+            pqkem_ciphertext: Uint8Array;
+            prekey_ids: number[];
+            initial_ciphertext: Uint8Array;
         }) {
             super();
-            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [1], this.#one_of_decls);
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [4], this.#one_of_decls);
             if (!Array.isArray(data) && typeof data == "object") {
-                this.ids = data.ids;
-                this.opks_remaining = data.opks_remaining;
-                this.pqopks_remaining = data.pqopks_remaining;
+                this.id_key = data.id_key;
+                this.ephemeral_key = data.ephemeral_key;
+                this.pqkem_ciphertext = data.pqkem_ciphertext;
+                this.prekey_ids = data.prekey_ids;
+                this.initial_ciphertext = data.initial_ciphertext;
             }
         }
-        get ids() {
-            return pb_1.Message.getFieldWithDefault(this, 1, []) as number[];
+        get id_key() {
+            return pb_1.Message.getField(this, 1) as Uint8Array;
         }
-        set ids(value: number[]) {
+        set id_key(value: Uint8Array) {
             pb_1.Message.setField(this, 1, value);
         }
-        get opks_remaining() {
-            return pb_1.Message.getField(this, 2) as number;
+        get has_id_key() {
+            return pb_1.Message.getField(this, 1) != null;
         }
-        set opks_remaining(value: number) {
+        get ephemeral_key() {
+            return pb_1.Message.getField(this, 2) as Uint8Array;
+        }
+        set ephemeral_key(value: Uint8Array) {
             pb_1.Message.setField(this, 2, value);
         }
-        get has_opks_remaining() {
+        get has_ephemeral_key() {
             return pb_1.Message.getField(this, 2) != null;
         }
-        get pqopks_remaining() {
-            return pb_1.Message.getField(this, 3) as number;
+        get pqkem_ciphertext() {
+            return pb_1.Message.getField(this, 3) as Uint8Array;
         }
-        set pqopks_remaining(value: number) {
+        set pqkem_ciphertext(value: Uint8Array) {
             pb_1.Message.setField(this, 3, value);
         }
-        get has_pqopks_remaining() {
+        get has_pqkem_ciphertext() {
             return pb_1.Message.getField(this, 3) != null;
         }
+        get prekey_ids() {
+            return pb_1.Message.getFieldWithDefault(this, 4, []) as number[];
+        }
+        set prekey_ids(value: number[]) {
+            pb_1.Message.setField(this, 4, value);
+        }
+        get initial_ciphertext() {
+            return pb_1.Message.getField(this, 5) as Uint8Array;
+        }
+        set initial_ciphertext(value: Uint8Array) {
+            pb_1.Message.setField(this, 5, value);
+        }
+        get has_initial_ciphertext() {
+            return pb_1.Message.getField(this, 5) != null;
+        }
         static fromObject(data: {
-            ids: number[];
-            opks_remaining?: number;
-            pqopks_remaining?: number;
-        }): KeysUsed {
-            const message = new KeysUsed({
-                ids: data.ids,
-                opks_remaining: data.opks_remaining,
-                pqopks_remaining: data.pqopks_remaining
+            id_key?: Uint8Array;
+            ephemeral_key?: Uint8Array;
+            pqkem_ciphertext?: Uint8Array;
+            prekey_ids: number[];
+            initial_ciphertext?: Uint8Array;
+        }): PQXDHInit {
+            const message = new PQXDHInit({
+                id_key: data.id_key,
+                ephemeral_key: data.ephemeral_key,
+                pqkem_ciphertext: data.pqkem_ciphertext,
+                prekey_ids: data.prekey_ids,
+                initial_ciphertext: data.initial_ciphertext
             });
             return message;
         }
         toObject() {
             const data: {
-                ids: number[];
-                opks_remaining?: number;
-                pqopks_remaining?: number;
+                id_key?: Uint8Array;
+                ephemeral_key?: Uint8Array;
+                pqkem_ciphertext?: Uint8Array;
+                prekey_ids: number[];
+                initial_ciphertext?: Uint8Array;
             } = {
-                ids: this.ids
+                prekey_ids: this.prekey_ids
             };
-            if (this.opks_remaining != null) {
-                data.opks_remaining = this.opks_remaining;
+            if (this.id_key != null) {
+                data.id_key = this.id_key;
             }
-            if (this.pqopks_remaining != null) {
-                data.pqopks_remaining = this.pqopks_remaining;
+            if (this.ephemeral_key != null) {
+                data.ephemeral_key = this.ephemeral_key;
+            }
+            if (this.pqkem_ciphertext != null) {
+                data.pqkem_ciphertext = this.pqkem_ciphertext;
+            }
+            if (this.initial_ciphertext != null) {
+                data.initial_ciphertext = this.initial_ciphertext;
             }
             return data;
         }
@@ -232,29 +266,39 @@ export namespace websocket {
         serialize(w: pb_1.BinaryWriter): void;
         serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
             const writer = w || new pb_1.BinaryWriter();
-            if (this.ids.length)
-                writer.writePackedInt64(1, this.ids);
-            if (this.has_opks_remaining)
-                writer.writeInt64(2, this.opks_remaining);
-            if (this.has_pqopks_remaining)
-                writer.writeInt64(3, this.pqopks_remaining);
+            if (this.has_id_key && this.id_key.length)
+                writer.writeBytes(1, this.id_key);
+            if (this.has_ephemeral_key && this.ephemeral_key.length)
+                writer.writeBytes(2, this.ephemeral_key);
+            if (this.has_pqkem_ciphertext && this.pqkem_ciphertext.length)
+                writer.writeBytes(3, this.pqkem_ciphertext);
+            if (this.prekey_ids.length)
+                writer.writePackedInt64(4, this.prekey_ids);
+            if (this.has_initial_ciphertext && this.initial_ciphertext.length)
+                writer.writeBytes(5, this.initial_ciphertext);
             if (!w)
                 return writer.getResultBuffer();
         }
-        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): KeysUsed {
-            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new KeysUsed();
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): PQXDHInit {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new PQXDHInit();
             while (reader.nextField()) {
                 if (reader.isEndGroup())
                     break;
                 switch (reader.getFieldNumber()) {
                     case 1:
-                        message.ids = reader.readPackedInt64();
+                        message.id_key = reader.readBytes();
                         break;
                     case 2:
-                        message.opks_remaining = reader.readInt64();
+                        message.ephemeral_key = reader.readBytes();
                         break;
                     case 3:
-                        message.pqopks_remaining = reader.readInt64();
+                        message.pqkem_ciphertext = reader.readBytes();
+                        break;
+                    case 4:
+                        message.prekey_ids = reader.readPackedInt64();
+                        break;
+                    case 5:
+                        message.initial_ciphertext = reader.readBytes();
                         break;
                     default: reader.skipField();
                 }
@@ -264,8 +308,111 @@ export namespace websocket {
         serializeBinary(): Uint8Array {
             return this.serialize();
         }
-        static deserializeBinary(bytes: Uint8Array): KeysUsed {
-            return KeysUsed.deserialize(bytes);
+        static deserializeBinary(bytes: Uint8Array): PQXDHInit {
+            return PQXDHInit.deserialize(bytes);
+        }
+    }
+    export class Forward extends pb_1.Message {
+        #one_of_decls: number[][] = [[2]];
+        constructor(data?: any[] | ({
+            handle: string;
+        } & (({
+            pqxdh_init?: PQXDHInit;
+        })))) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                this.handle = data.handle;
+                if ("pqxdh_init" in data && data.pqxdh_init != undefined) {
+                    this.pqxdh_init = data.pqxdh_init;
+                }
+            }
+        }
+        get handle() {
+            return pb_1.Message.getField(this, 1) as string;
+        }
+        set handle(value: string) {
+            pb_1.Message.setField(this, 1, value);
+        }
+        get has_handle() {
+            return pb_1.Message.getField(this, 1) != null;
+        }
+        get pqxdh_init() {
+            return pb_1.Message.getWrapperField(this, PQXDHInit, 2) as PQXDHInit;
+        }
+        set pqxdh_init(value: PQXDHInit) {
+            pb_1.Message.setOneofWrapperField(this, 2, this.#one_of_decls[0], value);
+        }
+        get has_pqxdh_init() {
+            return pb_1.Message.getField(this, 2) != null;
+        }
+        get payload() {
+            const cases: {
+                [index: number]: "none" | "pqxdh_init";
+            } = {
+                0: "none",
+                2: "pqxdh_init"
+            };
+            return cases[pb_1.Message.computeOneofCase(this, [2])];
+        }
+        static fromObject(data: {
+            handle?: string;
+            pqxdh_init?: ReturnType<typeof PQXDHInit.prototype.toObject>;
+        }): Forward {
+            const message = new Forward({
+                handle: data.handle
+            });
+            if (data.pqxdh_init != null) {
+                message.pqxdh_init = PQXDHInit.fromObject(data.pqxdh_init);
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                handle?: string;
+                pqxdh_init?: ReturnType<typeof PQXDHInit.prototype.toObject>;
+            } = {};
+            if (this.handle != null) {
+                data.handle = this.handle;
+            }
+            if (this.pqxdh_init != null) {
+                data.pqxdh_init = this.pqxdh_init.toObject();
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.has_handle && this.handle.length)
+                writer.writeString(1, this.handle);
+            if (this.has_pqxdh_init)
+                writer.writeMessage(2, this.pqxdh_init, () => this.pqxdh_init.serialize(writer));
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): Forward {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new Forward();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        message.handle = reader.readString();
+                        break;
+                    case 2:
+                        reader.readMessage(message.pqxdh_init, () => message.pqxdh_init = PQXDHInit.deserialize(reader));
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): Forward {
+            return Forward.deserialize(bytes);
         }
     }
     export class Envelope extends pb_1.Message {
@@ -273,15 +420,15 @@ export namespace websocket {
         constructor(data?: any[] | ({} & (({
             challenge?: Challenge;
             challenge_response?: never;
-            keys_used?: never;
+            forward?: never;
         } | {
             challenge?: never;
             challenge_response?: ChallengeResponse;
-            keys_used?: never;
+            forward?: never;
         } | {
             challenge?: never;
             challenge_response?: never;
-            keys_used?: KeysUsed;
+            forward?: Forward;
         })))) {
             super();
             pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
@@ -292,8 +439,8 @@ export namespace websocket {
                 if ("challenge_response" in data && data.challenge_response != undefined) {
                     this.challenge_response = data.challenge_response;
                 }
-                if ("keys_used" in data && data.keys_used != undefined) {
-                    this.keys_used = data.keys_used;
+                if ("forward" in data && data.forward != undefined) {
+                    this.forward = data.forward;
                 }
             }
         }
@@ -315,30 +462,30 @@ export namespace websocket {
         get has_challenge_response() {
             return pb_1.Message.getField(this, 2) != null;
         }
-        get keys_used() {
-            return pb_1.Message.getWrapperField(this, KeysUsed, 3) as KeysUsed;
+        get forward() {
+            return pb_1.Message.getWrapperField(this, Forward, 3) as Forward;
         }
-        set keys_used(value: KeysUsed) {
+        set forward(value: Forward) {
             pb_1.Message.setOneofWrapperField(this, 3, this.#one_of_decls[0], value);
         }
-        get has_keys_used() {
+        get has_forward() {
             return pb_1.Message.getField(this, 3) != null;
         }
         get payload() {
             const cases: {
-                [index: number]: "none" | "challenge" | "challenge_response" | "keys_used";
+                [index: number]: "none" | "challenge" | "challenge_response" | "forward";
             } = {
                 0: "none",
                 1: "challenge",
                 2: "challenge_response",
-                3: "keys_used"
+                3: "forward"
             };
             return cases[pb_1.Message.computeOneofCase(this, [1, 2, 3])];
         }
         static fromObject(data: {
             challenge?: ReturnType<typeof Challenge.prototype.toObject>;
             challenge_response?: ReturnType<typeof ChallengeResponse.prototype.toObject>;
-            keys_used?: ReturnType<typeof KeysUsed.prototype.toObject>;
+            forward?: ReturnType<typeof Forward.prototype.toObject>;
         }): Envelope {
             const message = new Envelope({});
             if (data.challenge != null) {
@@ -347,8 +494,8 @@ export namespace websocket {
             if (data.challenge_response != null) {
                 message.challenge_response = ChallengeResponse.fromObject(data.challenge_response);
             }
-            if (data.keys_used != null) {
-                message.keys_used = KeysUsed.fromObject(data.keys_used);
+            if (data.forward != null) {
+                message.forward = Forward.fromObject(data.forward);
             }
             return message;
         }
@@ -356,7 +503,7 @@ export namespace websocket {
             const data: {
                 challenge?: ReturnType<typeof Challenge.prototype.toObject>;
                 challenge_response?: ReturnType<typeof ChallengeResponse.prototype.toObject>;
-                keys_used?: ReturnType<typeof KeysUsed.prototype.toObject>;
+                forward?: ReturnType<typeof Forward.prototype.toObject>;
             } = {};
             if (this.challenge != null) {
                 data.challenge = this.challenge.toObject();
@@ -364,8 +511,8 @@ export namespace websocket {
             if (this.challenge_response != null) {
                 data.challenge_response = this.challenge_response.toObject();
             }
-            if (this.keys_used != null) {
-                data.keys_used = this.keys_used.toObject();
+            if (this.forward != null) {
+                data.forward = this.forward.toObject();
             }
             return data;
         }
@@ -377,8 +524,8 @@ export namespace websocket {
                 writer.writeMessage(1, this.challenge, () => this.challenge.serialize(writer));
             if (this.has_challenge_response)
                 writer.writeMessage(2, this.challenge_response, () => this.challenge_response.serialize(writer));
-            if (this.has_keys_used)
-                writer.writeMessage(3, this.keys_used, () => this.keys_used.serialize(writer));
+            if (this.has_forward)
+                writer.writeMessage(3, this.forward, () => this.forward.serialize(writer));
             if (!w)
                 return writer.getResultBuffer();
         }
@@ -395,7 +542,7 @@ export namespace websocket {
                         reader.readMessage(message.challenge_response, () => message.challenge_response = ChallengeResponse.deserialize(reader));
                         break;
                     case 3:
-                        reader.readMessage(message.keys_used, () => message.keys_used = KeysUsed.deserialize(reader));
+                        reader.readMessage(message.forward, () => message.forward = Forward.deserialize(reader));
                         break;
                     default: reader.skipField();
                 }

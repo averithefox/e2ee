@@ -17,7 +17,8 @@ PROTOBUF_C__BEGIN_DECLS
 
 typedef struct Websocket__Challenge Websocket__Challenge;
 typedef struct Websocket__ChallengeResponse Websocket__ChallengeResponse;
-typedef struct Websocket__KeysUsed Websocket__KeysUsed;
+typedef struct Websocket__PQXDHInit Websocket__PQXDHInit;
+typedef struct Websocket__Forward Websocket__Forward;
 typedef struct Websocket__Envelope Websocket__Envelope;
 
 
@@ -47,24 +48,46 @@ struct  Websocket__ChallengeResponse
 , NULL, {0,NULL} }
 
 
-struct  Websocket__KeysUsed
+struct  Websocket__PQXDHInit
 {
   ProtobufCMessage base;
-  size_t n_ids;
-  int64_t *ids;
-  int64_t opks_remaining;
-  int64_t pqopks_remaining;
+  ProtobufCBinaryData id_key;
+  ProtobufCBinaryData ephemeral_key;
+  ProtobufCBinaryData pqkem_ciphertext;
+  size_t n_prekey_ids;
+  int64_t *prekey_ids;
+  ProtobufCBinaryData initial_ciphertext;
 };
-#define WEBSOCKET__KEYS_USED__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&websocket__keys_used__descriptor) \
-, 0,NULL, 0, 0 }
+#define WEBSOCKET__PQXDHINIT__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&websocket__pqxdhinit__descriptor) \
+, {0,NULL}, {0,NULL}, {0,NULL}, 0,NULL, {0,NULL} }
+
+
+typedef enum {
+  WEBSOCKET__FORWARD__PAYLOAD__NOT_SET = 0,
+  WEBSOCKET__FORWARD__PAYLOAD_PQXDH_INIT = 2
+    PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(WEBSOCKET__FORWARD__PAYLOAD__CASE)
+} Websocket__Forward__PayloadCase;
+
+struct  Websocket__Forward
+{
+  ProtobufCMessage base;
+  char *handle;
+  Websocket__Forward__PayloadCase payload_case;
+  union {
+    Websocket__PQXDHInit *pqxdh_init;
+  };
+};
+#define WEBSOCKET__FORWARD__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&websocket__forward__descriptor) \
+, NULL, WEBSOCKET__FORWARD__PAYLOAD__NOT_SET, {0} }
 
 
 typedef enum {
   WEBSOCKET__ENVELOPE__PAYLOAD__NOT_SET = 0,
   WEBSOCKET__ENVELOPE__PAYLOAD_CHALLENGE = 1,
   WEBSOCKET__ENVELOPE__PAYLOAD_CHALLENGE_RESPONSE = 2,
-  WEBSOCKET__ENVELOPE__PAYLOAD_KEYS_USED = 3
+  WEBSOCKET__ENVELOPE__PAYLOAD_FORWARD = 3
     PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(WEBSOCKET__ENVELOPE__PAYLOAD__CASE)
 } Websocket__Envelope__PayloadCase;
 
@@ -82,9 +105,9 @@ struct  Websocket__Envelope
      */
     Websocket__ChallengeResponse *challenge_response;
     /*
-     * server -> client
+     * client -> server -> client
      */
-    Websocket__KeysUsed *keys_used;
+    Websocket__Forward *forward;
   };
 };
 #define WEBSOCKET__ENVELOPE__INIT \
@@ -130,24 +153,43 @@ Websocket__ChallengeResponse *
 void   websocket__challenge_response__free_unpacked
                      (Websocket__ChallengeResponse *message,
                       ProtobufCAllocator *allocator);
-/* Websocket__KeysUsed methods */
-void   websocket__keys_used__init
-                     (Websocket__KeysUsed         *message);
-size_t websocket__keys_used__get_packed_size
-                     (const Websocket__KeysUsed   *message);
-size_t websocket__keys_used__pack
-                     (const Websocket__KeysUsed   *message,
+/* Websocket__PQXDHInit methods */
+void   websocket__pqxdhinit__init
+                     (Websocket__PQXDHInit         *message);
+size_t websocket__pqxdhinit__get_packed_size
+                     (const Websocket__PQXDHInit   *message);
+size_t websocket__pqxdhinit__pack
+                     (const Websocket__PQXDHInit   *message,
                       uint8_t             *out);
-size_t websocket__keys_used__pack_to_buffer
-                     (const Websocket__KeysUsed   *message,
+size_t websocket__pqxdhinit__pack_to_buffer
+                     (const Websocket__PQXDHInit   *message,
                       ProtobufCBuffer     *buffer);
-Websocket__KeysUsed *
-       websocket__keys_used__unpack
+Websocket__PQXDHInit *
+       websocket__pqxdhinit__unpack
                      (ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data);
-void   websocket__keys_used__free_unpacked
-                     (Websocket__KeysUsed *message,
+void   websocket__pqxdhinit__free_unpacked
+                     (Websocket__PQXDHInit *message,
+                      ProtobufCAllocator *allocator);
+/* Websocket__Forward methods */
+void   websocket__forward__init
+                     (Websocket__Forward         *message);
+size_t websocket__forward__get_packed_size
+                     (const Websocket__Forward   *message);
+size_t websocket__forward__pack
+                     (const Websocket__Forward   *message,
+                      uint8_t             *out);
+size_t websocket__forward__pack_to_buffer
+                     (const Websocket__Forward   *message,
+                      ProtobufCBuffer     *buffer);
+Websocket__Forward *
+       websocket__forward__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   websocket__forward__free_unpacked
+                     (Websocket__Forward *message,
                       ProtobufCAllocator *allocator);
 /* Websocket__Envelope methods */
 void   websocket__envelope__init
@@ -176,8 +218,11 @@ typedef void (*Websocket__Challenge_Closure)
 typedef void (*Websocket__ChallengeResponse_Closure)
                  (const Websocket__ChallengeResponse *message,
                   void *closure_data);
-typedef void (*Websocket__KeysUsed_Closure)
-                 (const Websocket__KeysUsed *message,
+typedef void (*Websocket__PQXDHInit_Closure)
+                 (const Websocket__PQXDHInit *message,
+                  void *closure_data);
+typedef void (*Websocket__Forward_Closure)
+                 (const Websocket__Forward *message,
                   void *closure_data);
 typedef void (*Websocket__Envelope_Closure)
                  (const Websocket__Envelope *message,
@@ -190,7 +235,8 @@ typedef void (*Websocket__Envelope_Closure)
 
 extern const ProtobufCMessageDescriptor websocket__challenge__descriptor;
 extern const ProtobufCMessageDescriptor websocket__challenge_response__descriptor;
-extern const ProtobufCMessageDescriptor websocket__keys_used__descriptor;
+extern const ProtobufCMessageDescriptor websocket__pqxdhinit__descriptor;
+extern const ProtobufCMessageDescriptor websocket__forward__descriptor;
 extern const ProtobufCMessageDescriptor websocket__envelope__descriptor;
 
 PROTOBUF_C__END_DECLS

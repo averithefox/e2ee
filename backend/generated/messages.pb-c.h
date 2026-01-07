@@ -83,7 +83,9 @@ struct  Messages__Identity
 struct  Messages__IdentityPatch
 {
   ProtobufCMessage base;
-  char *handle;
+  /*
+   * optional string handle = 1;
+   */
   Messages__SignedPrekey *prekey;
   Messages__SignedPrekey *pqkem_prekey;
   size_t n_one_time_pqkem_prekeys;
@@ -93,7 +95,7 @@ struct  Messages__IdentityPatch
 };
 #define MESSAGES__IDENTITY_PATCH__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&messages__identity_patch__descriptor) \
-, NULL, NULL, NULL, 0,NULL, 0,NULL }
+, NULL, NULL, 0,NULL, 0,NULL }
 
 
 /* Messages__Prekey methods */

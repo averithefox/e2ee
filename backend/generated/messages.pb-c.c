@@ -527,20 +527,8 @@ const ProtobufCMessageDescriptor messages__identity__descriptor =
   (ProtobufCMessageInit) messages__identity__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor messages__identity_patch__field_descriptors[5] =
+static const ProtobufCFieldDescriptor messages__identity_patch__field_descriptors[4] =
 {
-  {
-    "handle",
-    1,
-    PROTOBUF_C_LABEL_OPTIONAL,
-    PROTOBUF_C_TYPE_STRING,
-    0,   /* quantifier_offset */
-    offsetof(Messages__IdentityPatch, handle),
-    NULL,
-    NULL,
-    0,             /* flags */
-    0,NULL,NULL    /* reserved1,reserved2, etc */
-  },
   {
     "prekey",
     2,
@@ -591,16 +579,15 @@ static const ProtobufCFieldDescriptor messages__identity_patch__field_descriptor
   },
 };
 static const unsigned messages__identity_patch__field_indices_by_name[] = {
-  0,   /* field[0] = handle */
-  3,   /* field[3] = one_time_pqkem_prekeys */
-  4,   /* field[4] = one_time_prekeys */
-  2,   /* field[2] = pqkem_prekey */
-  1,   /* field[1] = prekey */
+  2,   /* field[2] = one_time_pqkem_prekeys */
+  3,   /* field[3] = one_time_prekeys */
+  1,   /* field[1] = pqkem_prekey */
+  0,   /* field[0] = prekey */
 };
 static const ProtobufCIntRange messages__identity_patch__number_ranges[1 + 1] =
 {
-  { 1, 0 },
-  { 0, 5 }
+  { 2, 0 },
+  { 0, 4 }
 };
 const ProtobufCMessageDescriptor messages__identity_patch__descriptor =
 {
@@ -610,7 +597,7 @@ const ProtobufCMessageDescriptor messages__identity_patch__descriptor =
   "Messages__IdentityPatch",
   "messages",
   sizeof(Messages__IdentityPatch),
-  5,
+  4,
   messages__identity_patch__field_descriptors,
   messages__identity_patch__field_indices_by_name,
   1,  messages__identity_patch__number_ranges,

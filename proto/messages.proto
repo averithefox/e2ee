@@ -32,7 +32,8 @@ message Identity {
 }
 
 message IdentityPatch {
-  optional string handle = 1;
+  reserved 1;
+  // optional string handle = 1;
   optional SignedPrekey prekey = 2;
   optional SignedPrekey pqkem_prekey = 3;
   repeated SignedPrekey one_time_pqkem_prekeys = 4;

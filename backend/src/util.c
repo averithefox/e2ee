@@ -14,7 +14,7 @@
     goto err;      \
   } while (0)
 
-int64_t verify_request(struct mg_http_message *hm) {
+int64_t verify_request(struct mg_http_message *hm, void **id_key) {
   int64_t ret = -418;
   char *sig_buf = NULL;
   sqlite3_stmt *stmt = NULL;
@@ -95,6 +95,14 @@ int64_t verify_request(struct mg_http_message *hm) {
   if (!xeddsa_verify(pk_buf, msg_buf, msg_len, (const uint8_t *)sig_buf)) {
     fprintf(stderr, "[%s:%d] invalid signature\n", __func__, __LINE__);
     ERR(401);
+  }
+
+  if (id_key) {
+    if ((*id_key = malloc(pk_len)) == NULL) {
+      fprintf(stderr, "[%s:%d] out of memory\n", __func__, __LINE__);
+      ERR(500);
+    }
+    memcpy(*id_key, pk_buf, pk_len);
   }
 
 err:

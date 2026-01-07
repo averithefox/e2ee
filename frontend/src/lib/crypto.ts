@@ -1,104 +1,66 @@
-import type { Message } from 'google-protobuf';
-import { b64Encode } from './utils';
+import { Point, etc, hashes } from '@noble/ed25519';
+import { sha512 } from '@noble/hashes/sha2.js';
 
-export function genEncKeyPair() {
-  return crypto.subtle.generateKey(
-    {
-      name: 'RSA-OAEP',
-      modulusLength: 4096,
-      publicExponent: new Uint8Array([0x01, 0x00, 0x01]), // 65537
-      hash: 'SHA-512'
-    },
-    true, // extractable
-    ['encrypt', 'decrypt']
-  );
+hashes.sha512 = sha512;
+const { p, n: q } = Point.CURVE();
+const { mod, invert, concatBytes, randomBytes } = etc;
+
+export { randomBytes };
+
+// Bytes <-> BigInt (little-endian)
+const toN = (b: Uint8Array) => b.reduce((n, x, i) => n | (BigInt(x) << BigInt(i * 8)), 0n);
+const toB = (n: bigint, len = 32) => Uint8Array.from({ length: len }, (_, i) => Number((n >> BigInt(i * 8)) & 0xffn));
+
+const hash1 = (...d: Uint8Array[]) => mod(toN(sha512(concatBytes(new Uint8Array(32).fill(0xff), ...d))), q);
+const xhash = (...d: Uint8Array[]) => mod(toN(sha512(concatBytes(...d))), q);
+
+// Clamp scalar per RFC 7748
+const clamp = (k: Uint8Array) => {
+  const c = new Uint8Array(k);
+  c[0]! &= 248;
+  c[31]! &= 127;
+  c[31]! |= 64;
+  return c;
+};
+
+// Montgomery u -> Edwards y: y = (u-1)/(u+1)
+const uToY = (u: bigint) => mod((u - 1n) * invert(u + 1n, p), p);
+
+// Convert X25519 public key (u-coord) to Edwards point with sign=0
+const convertMont = (u: bigint) => {
+  const yBytes = toB(uToY(mod(u, 2n ** 255n)));
+  yBytes[31]! &= 0x7f;
+  return Point.fromBytes(yBytes);
+};
+
+// Convert X25519 private key to Edwards keypair (A, a) with sign=0
+const calcKeyPair = (k: bigint) => {
+  const kq = mod(k, q),
+    E = Point.BASE.multiply(kq),
+    { x } = E.toAffine();
+  return x & 1n ? { A: E.negate(), a: mod(-kq, q) } : { A: E, a: kq };
+};
+
+/** XEdDSA Sign: k=X25519 private key, M=message, Z=64 random bytes */
+export function xeddsaSign(k: Uint8Array, M: Uint8Array, Z: Uint8Array): Uint8Array {
+  const { A, a } = calcKeyPair(toN(clamp(k)));
+  const r = hash1(toB(a), M, Z);
+  const R = Point.BASE.multiply(r);
+  const h = xhash(R.toBytes(), A.toBytes(), M);
+  return concatBytes(R.toBytes(), toB(mod(r + h * a, q)));
 }
 
-export function genSigKeyPair() {
-  return crypto.subtle.generateKey(
-    {
-      name: 'RSASSA-PKCS1-v1_5',
-      modulusLength: 4096,
-      publicExponent: new Uint8Array([0x01, 0x00, 0x01]), // 65537
-      hash: 'SHA-512'
-    },
-    true, // extractable
-    ['sign', 'verify']
-  );
-}
-
-/**
- * @param privateKey CryptoKey for signing, null to disable signing and undefined to use the private key from localStorage
- */
-export async function yeet(path: string, msg: Message, privateKey?: CryptoKey | null) {
-  const bytes = msg.serializeBinary();
-  const identity = localStorage.getItem('handle');
-  const storedKey = localStorage.getItem('sig_priv');
-
-  if (privateKey === null) {
-    return fetch(path, {
-      method: 'POST',
-      body: bytes
-    });
+/** XEdDSA Verify: u=X25519 public key, M=message, sig=64-byte signature */
+export function xeddsaVerify(u: Uint8Array, M: Uint8Array, sig: Uint8Array): boolean {
+  if (sig.length !== 64 || u.length !== 32) return false;
+  const [R_b, s_b] = [sig.slice(0, 32), sig.slice(32)];
+  const [uN, s] = [toN(u), toN(s_b)];
+  if (uN >= p || s >= q) return false;
+  try {
+    const [R, A] = [Point.fromBytes(R_b), convertMont(uN)];
+    const h = xhash(R_b, A.toBytes(), M);
+    return R.equals(Point.BASE.multiply(s).subtract(A.multiply(h)));
+  } catch {
+    return false;
   }
-
-  let signingKey: CryptoKey | undefined = privateKey;
-  if (signingKey === undefined) {
-    if (!storedKey) {
-      return fetch(path, {
-        method: 'POST',
-        body: bytes
-      });
-    }
-
-    const jwk = JSON.parse(storedKey);
-    signingKey = await crypto.subtle.importKey(
-      'jwk',
-      jwk,
-      {
-        name: 'RSASSA-PKCS1-v1_5',
-        hash: 'SHA-512'
-      },
-      false,
-      ['sign']
-    );
-  }
-
-  if (!signingKey) {
-    return fetch(path, {
-      method: 'POST',
-      body: bytes
-    });
-  }
-
-  // See: verify_request() in backend/src/util.c
-  const encoder = new TextEncoder();
-
-  const url = new URL(path, window.location.origin);
-  const methodBytes = encoder.encode('POST');
-  const uriBytes = encoder.encode(url.pathname + url.search);
-
-  const parts = [methodBytes, uriBytes, bytes];
-  const msgToSign = new Uint8Array(parts.reduce((acc, part) => acc + part.length, 0));
-  let offset = 0;
-  for (const part of parts) {
-    msgToSign.set(part, offset);
-    offset += part.length;
-  }
-
-  const sigBuf = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', signingKey, msgToSign);
-  const sigB64 = b64Encode(new Uint8Array(sigBuf));
-
-  const headers: Record<string, string> = {
-    'X-Signature': sigB64
-  };
-  if (identity) {
-    headers['X-Identity'] = identity;
-  }
-
-  return fetch(path, {
-    method: 'POST',
-    body: bytes,
-    headers
-  });
 }

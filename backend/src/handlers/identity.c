@@ -7,6 +7,7 @@
 #include "messages.pb-c.h"
 #include "mongoose.h"
 #include "protobuf-c.h"
+#include "util.h"
 
 #ifndef NDEBUG
 #define NEW_IDENTITY_REPLY_HEADERS "Access-Control-Allow-Origin: *\r\n"
@@ -20,14 +21,14 @@
     goto err;             \
   } while (0)
 
-#define MIN_ONE_TIME_PREKEYS 10
-
 #define BUF(STRUCT) (STRUCT).data, (STRUCT).len
 
-static int verify_xeddsa_signature(Messages__SignedPrekey *pb,
-                                   const uint8_t *pk) {
-  if (!pb || !pk) return 0;
-  return xeddsa_verify(pk, BUF(pb->key), pb->sig.data);
+static int verify_xeddsa_signature(const Messages__SignedPrekey *pb,
+                                   const ProtobufCBinaryData *pk) {
+  if (!pb || pb->sig.len != XEDDSA_SIGNATURE_LENGTH || !pk ||
+      pk->len != CURVE25519_PUBLIC_KEY_LENGTH)
+    return 0;
+  return xeddsa_verify(pk->data, BUF(pb->key), pb->sig.data);
 }
 
 static void handle_identity_POST_request(struct mg_connection *c,
@@ -42,26 +43,19 @@ static void handle_identity_POST_request(struct mg_connection *c,
     ERR(400);
   }
 
-  if (pb->id_key.len != CURVE25519_PUBLIC_KEY_LENGTH ||
-      pb->prekey->key.len != CURVE25519_PUBLIC_KEY_LENGTH ||
-      pb->prekey->sig.len != XEDDSA_SIGNATURE_LENGTH ||
-      pb->pqkem_prekey->sig.len != XEDDSA_SIGNATURE_LENGTH ||
-      pb->n_one_time_pqkem_prekeys < MIN_ONE_TIME_PREKEYS ||
-      pb->n_one_time_prekeys < MIN_ONE_TIME_PREKEYS) {
-    fprintf(stderr, "[%s:%d] invalid PQXDH key bundle\n", __func__, __LINE__);
+  if (pb->prekey->key.len != CURVE25519_PUBLIC_KEY_LENGTH) {
+    fprintf(stderr, "[%s:%d] invalid prekey\n", __func__, __LINE__);
     ERR(400);
   }
 
-  if (!verify_xeddsa_signature(pb->prekey, pb->id_key.data) ||
-      !verify_xeddsa_signature(pb->pqkem_prekey, pb->id_key.data)) {
+  if (!verify_xeddsa_signature(pb->prekey, &pb->id_key) ||
+      !verify_xeddsa_signature(pb->pqkem_prekey, &pb->id_key)) {
     fprintf(stderr, "[%s:%d] invalid signature\n", __func__, __LINE__);
     ERR(400);
   }
 
   for (size_t i = 0; i < pb->n_one_time_pqkem_prekeys; ++i) {
-    Messages__SignedPrekey *pqopk = pb->one_time_pqkem_prekeys[i];
-    if (pqopk->sig.len != XEDDSA_SIGNATURE_LENGTH ||
-        !verify_xeddsa_signature(pqopk, pb->id_key.data)) {
+    if (!verify_xeddsa_signature(pb->one_time_pqkem_prekeys[i], &pb->id_key)) {
       fprintf(stderr, "[%s:%d] invalid signature for PQOPK at [%zu]\n",
               __func__, __LINE__, i);
       ERR(400);
@@ -84,41 +78,44 @@ static void handle_identity_POST_request(struct mg_connection *c,
   const char *sql2 = "insert into opks (`for`,bytes,id) values (?,?,?);";
   // clang-format on
 
-  if (sqlite3_prepare_v3(db, sql0, -1, 0, &stmt0, NULL) != SQLITE_OK ||
-      sqlite3_prepare_v3(db, sql1, -1, 0, &stmt1, NULL) != SQLITE_OK ||
-      sqlite3_prepare_v3(db, sql2, -1, 0, &stmt2, NULL) != SQLITE_OK) {
-    fprintf(stderr, "[%s:%d] prepare failed: %s\n", __func__, __LINE__,
+  int rc;
+  if ((rc = sqlite3_prepare_v3(db, sql0, -1, 0, &stmt0, NULL)) != SQLITE_OK ||
+      (rc = sqlite3_prepare_v3(db, sql1, -1, 0, &stmt1, NULL)) != SQLITE_OK ||
+      (rc = sqlite3_prepare_v3(db, sql2, -1, 0, &stmt2, NULL)) != SQLITE_OK) {
+    fprintf(stderr, "[%s:%d] prepare failed: %d (%s)\n", __func__, __LINE__, rc,
             sqlite3_errmsg(db));
     ERR(500);
   }
 
-  if (sqlite3_exec(db, "begin transaction;", NULL, NULL, NULL) != SQLITE_OK) {
-    fprintf(stderr, "[%s:%d] begin transaction failed: %s\n", __func__,
-            __LINE__, sqlite3_errmsg(db));
+  if ((rc = sqlite3_exec(db, "begin transaction;", NULL, NULL, NULL)) !=
+      SQLITE_OK) {
+    fprintf(stderr, "[%s:%d] begin transaction failed: %d (%s)\n", __func__,
+            __LINE__, rc, sqlite3_errmsg(db));
     ERR(500);
   }
 
-  if (sqlite3_bind_text(stmt0, 1, pb->handle, -1, SQLITE_STATIC) != SQLITE_OK ||
-      sqlite3_bind_blob(stmt0, 2, BUF(pb->id_key), SQLITE_STATIC) !=
+  if ((rc = sqlite3_bind_text(stmt0, 1, pb->handle, -1, SQLITE_STATIC)) !=
           SQLITE_OK ||
-      sqlite3_bind_blob(stmt0, 3, BUF(pb->prekey->key), SQLITE_STATIC) !=
+      (rc = sqlite3_bind_blob(stmt0, 2, BUF(pb->id_key), SQLITE_STATIC)) !=
           SQLITE_OK ||
-      sqlite3_bind_int64(stmt0, 4, pb->prekey->id) != SQLITE_OK ||
-      sqlite3_bind_blob(stmt0, 5, BUF(pb->prekey->sig), SQLITE_STATIC) !=
+      (rc = sqlite3_bind_blob(stmt0, 3, BUF(pb->prekey->key), SQLITE_STATIC)) !=
           SQLITE_OK ||
-      sqlite3_bind_blob(stmt0, 6, BUF(pb->pqkem_prekey->key), SQLITE_STATIC) !=
+      (rc = sqlite3_bind_int64(stmt0, 4, pb->prekey->id)) != SQLITE_OK ||
+      (rc = sqlite3_bind_blob(stmt0, 5, BUF(pb->prekey->sig), SQLITE_STATIC)) !=
           SQLITE_OK ||
-      sqlite3_bind_int64(stmt0, 7, pb->pqkem_prekey->id) != SQLITE_OK ||
-      sqlite3_bind_blob(stmt0, 8, BUF(pb->pqkem_prekey->sig), SQLITE_STATIC) !=
-          SQLITE_OK) {
-    fprintf(stderr, "[%s:%d] bind failed: %s\n", __func__, __LINE__,
+      (rc = sqlite3_bind_blob(stmt0, 6, BUF(pb->pqkem_prekey->key),
+                              SQLITE_STATIC)) != SQLITE_OK ||
+      (rc = sqlite3_bind_int64(stmt0, 7, pb->pqkem_prekey->id)) != SQLITE_OK ||
+      (rc = sqlite3_bind_blob(stmt0, 8, BUF(pb->pqkem_prekey->sig),
+                              SQLITE_STATIC)) != SQLITE_OK) {
+    fprintf(stderr, "[%s:%d] bind failed: %d (%s)\n", __func__, __LINE__, rc,
             sqlite3_errmsg(db));
     sqlite3_exec(db, "rollback;", NULL, NULL, NULL);
     ERR(500);
   }
 
-  if (sqlite3_step(stmt0) != SQLITE_DONE) {
-    fprintf(stderr, "[%s:%d] step failed: %s\n", __func__, __LINE__,
+  if ((rc = sqlite3_step(stmt0)) != SQLITE_DONE) {
+    fprintf(stderr, "[%s:%d] step failed: %d (%s)\n", __func__, __LINE__, rc,
             sqlite3_errmsg(db));
     sqlite3_exec(db, "rollback;", NULL, NULL, NULL);
     ERR(500);
@@ -133,20 +130,20 @@ static void handle_identity_POST_request(struct mg_connection *c,
   for (size_t i = 0; i < pb->n_one_time_pqkem_prekeys; ++i) {
     Messages__SignedPrekey *pqopk = pb->one_time_pqkem_prekeys[i];
 
-    if (sqlite3_bind_int64(stmt1, 1, id) != SQLITE_OK ||
-        sqlite3_bind_blob(stmt1, 2, BUF(pqopk->key), SQLITE_STATIC) !=
+    if ((rc = sqlite3_bind_int64(stmt1, 1, id)) != SQLITE_OK ||
+        (rc = sqlite3_bind_blob(stmt1, 2, BUF(pqopk->key), SQLITE_STATIC)) !=
             SQLITE_OK ||
-        sqlite3_bind_int64(stmt1, 3, pqopk->id) != SQLITE_OK ||
-        sqlite3_bind_blob(stmt1, 4, BUF(pqopk->sig), SQLITE_STATIC) !=
+        (rc = sqlite3_bind_int64(stmt1, 3, pqopk->id)) != SQLITE_OK ||
+        (rc = sqlite3_bind_blob(stmt1, 4, BUF(pqopk->sig), SQLITE_STATIC)) !=
             SQLITE_OK) {
-      fprintf(stderr, "[%s:%d] bind failed: %s\n", __func__, __LINE__,
+      fprintf(stderr, "[%s:%d] bind failed: %d (%s)\n", __func__, __LINE__, rc,
               sqlite3_errmsg(db));
       sqlite3_exec(db, "rollback;", NULL, NULL, NULL);
       ERR(500);
     }
 
-    if (sqlite3_step(stmt1) != SQLITE_DONE) {
-      fprintf(stderr, "[%s:%d] step failed: %s\n", __func__, __LINE__,
+    if ((rc = sqlite3_step(stmt1)) != SQLITE_DONE) {
+      fprintf(stderr, "[%s:%d] step failed: %d (%s)\n", __func__, __LINE__, rc,
               sqlite3_errmsg(db));
       sqlite3_exec(db, "rollback;", NULL, NULL, NULL);
       ERR(500);
@@ -159,18 +156,18 @@ static void handle_identity_POST_request(struct mg_connection *c,
   for (size_t i = 0; i < pb->n_one_time_prekeys; ++i) {
     Messages__Prekey *opk = pb->one_time_prekeys[i];
 
-    if (sqlite3_bind_int64(stmt2, 1, id) != SQLITE_OK ||
-        sqlite3_bind_blob(stmt2, 2, BUF(opk->key), SQLITE_STATIC) !=
+    if ((rc = sqlite3_bind_int64(stmt2, 1, id)) != SQLITE_OK ||
+        (rc = sqlite3_bind_blob(stmt2, 2, BUF(opk->key), SQLITE_STATIC)) !=
             SQLITE_OK ||
-        sqlite3_bind_int64(stmt2, 3, opk->id) != SQLITE_OK) {
-      fprintf(stderr, "[%s:%d] bind failed: %s\n", __func__, __LINE__,
+        (rc = sqlite3_bind_int64(stmt2, 3, opk->id)) != SQLITE_OK) {
+      fprintf(stderr, "[%s:%d] bind failed: %d (%s)\n", __func__, __LINE__, rc,
               sqlite3_errmsg(db));
       sqlite3_exec(db, "rollback;", NULL, NULL, NULL);
       ERR(500);
     }
 
-    if (sqlite3_step(stmt2) != SQLITE_DONE) {
-      fprintf(stderr, "[%s:%d] step failed: %s\n", __func__, __LINE__,
+    if ((rc = sqlite3_step(stmt2)) != SQLITE_DONE) {
+      fprintf(stderr, "[%s:%d] step failed: %d (%s)\n", __func__, __LINE__, rc,
               sqlite3_errmsg(db));
       sqlite3_exec(db, "rollback;", NULL, NULL, NULL);
       ERR(500);
@@ -180,8 +177,8 @@ static void handle_identity_POST_request(struct mg_connection *c,
     sqlite3_clear_bindings(stmt2);
   }
 
-  if (sqlite3_exec(db, "commit;", NULL, NULL, NULL) != SQLITE_OK) {
-    fprintf(stderr, "[%s:%d] commit failed: %s\n", __func__, __LINE__,
+  if ((rc = sqlite3_exec(db, "commit;", NULL, NULL, NULL)) != SQLITE_OK) {
+    fprintf(stderr, "[%s:%d] commit failed: %d (%s)\n", __func__, __LINE__, rc,
             sqlite3_errmsg(db));
     ERR(500);
   }
@@ -196,10 +193,233 @@ err:
   mg_http_reply(c, status_code, NEW_IDENTITY_REPLY_HEADERS, "");
 }
 
+static void handle_identity_PATCH_request(struct mg_connection *c,
+                                          struct mg_http_message *hm) {
+  int status_code = 418;
+  void *id_key = NULL;
+  Messages__IdentityPatch *pb = NULL;
+  sqlite3_stmt *stmt_update = NULL, *stmt_insert_pqopk = NULL,
+               *stmt_insert_opk = NULL;
+
+  int64_t id = verify_request(hm, &id_key);
+  if (id < 0) ERR(-id);
+
+  pb = messages__identity_patch__unpack(NULL, hm->body.len,
+                                        (uint8_t *)hm->body.buf);
+  if (!pb) {
+    fprintf(stderr, "[%s:%d] invalid message\n", __func__, __LINE__);
+    ERR(400);
+  }
+
+  if (pb->prekey && pb->prekey->key.len != CURVE25519_PUBLIC_KEY_LENGTH) {
+    fprintf(stderr, "[%s:%d] invalid prekey\n", __func__, __LINE__);
+    ERR(400);
+  }
+
+  if ((pb->prekey && !verify_xeddsa_signature(pb->prekey, id_key)) ||
+      (pb->pqkem_prekey &&
+       !verify_xeddsa_signature(pb->pqkem_prekey, id_key))) {
+    fprintf(stderr, "[%s:%d] invalid signature\n", __func__, __LINE__);
+    ERR(400);
+  }
+
+  for (size_t i = 0; i < pb->n_one_time_pqkem_prekeys; ++i) {
+    if (!verify_xeddsa_signature(pb->one_time_pqkem_prekeys[i], id_key)) {
+      fprintf(stderr, "[%s:%d] invalid signature for PQOPK at [%zu]\n",
+              __func__, __LINE__, i);
+      ERR(400);
+    }
+  }
+
+  // clang-format off
+  const char *sql_update = "update identities set spk=?, spk_id=?, spk_sig=?, pqspk=?, pqspk_id=?, pqspk_sig=? where id=?;";
+  const char *sql_update_spk_only = "update identities set spk=?, spk_id=?, spk_sig=? where id=?;";
+  const char *sql_update_pqspk_only = "update identities set pqspk=?, pqspk_id=?, pqspk_sig=? where id=?;";
+  const char *sql_insert_pqopk = "insert into pqopks (for,bytes,id,sig) values (?,?,?,?);";
+  const char *sql_insert_opk = "insert into opks (for,bytes,id) values (?,?,?);";
+  // clang-format on
+
+  int rc;
+  if (pb->prekey && pb->pqkem_prekey) {
+    if ((rc = sqlite3_prepare_v3(db, sql_update, -1, 0, &stmt_update, NULL)) !=
+        SQLITE_OK) {
+      fprintf(stderr, "[%s:%d] prepare update failed: %d (%s)\n", __func__,
+              __LINE__, rc, sqlite3_errmsg(db));
+      ERR(500);
+    }
+  } else if (pb->prekey) {
+    if ((rc = sqlite3_prepare_v3(db, sql_update_spk_only, -1, 0, &stmt_update,
+                                 NULL)) != SQLITE_OK) {
+      fprintf(stderr, "[%s:%d] prepare update spk failed: %d (%s)\n", __func__,
+              __LINE__, rc, sqlite3_errmsg(db));
+      ERR(500);
+    }
+  } else if (pb->pqkem_prekey) {
+    if ((rc = sqlite3_prepare_v3(db, sql_update_pqspk_only, -1, 0, &stmt_update,
+                                 NULL)) != SQLITE_OK) {
+      fprintf(stderr, "[%s:%d] prepare update pqspk failed: %d (%s)\n",
+              __func__, __LINE__, rc, sqlite3_errmsg(db));
+      ERR(500);
+    }
+  }
+
+  if ((rc = sqlite3_exec(db, "begin transaction;", NULL, NULL, NULL)) !=
+      SQLITE_OK) {
+    fprintf(stderr, "[%s:%d] begin transaction failed: %d (%s)\n", __func__,
+            __LINE__, rc, sqlite3_errmsg(db));
+    ERR(500);
+  }
+
+  if (pb->prekey && pb->pqkem_prekey) {
+    if ((rc = sqlite3_bind_blob(stmt_update, 1, BUF(pb->prekey->key),
+                                SQLITE_STATIC)) != SQLITE_OK ||
+        (rc = sqlite3_bind_int64(stmt_update, 2, pb->prekey->id)) !=
+            SQLITE_OK ||
+        (rc = sqlite3_bind_blob(stmt_update, 3, BUF(pb->prekey->sig),
+                                SQLITE_STATIC)) != SQLITE_OK ||
+        (rc = sqlite3_bind_blob(stmt_update, 4, BUF(pb->pqkem_prekey->key),
+                                SQLITE_STATIC)) != SQLITE_OK ||
+        (rc = sqlite3_bind_int64(stmt_update, 5, pb->pqkem_prekey->id)) !=
+            SQLITE_OK ||
+        (rc = sqlite3_bind_blob(stmt_update, 6, BUF(pb->pqkem_prekey->sig),
+                                SQLITE_STATIC)) != SQLITE_OK ||
+        (rc = sqlite3_bind_int64(stmt_update, 7, id)) != SQLITE_OK) {
+      fprintf(stderr, "[%s:%d] bind update failed: %d (%s)\n", __func__,
+              __LINE__, rc, sqlite3_errmsg(db));
+      sqlite3_exec(db, "rollback;", NULL, NULL, NULL);
+      ERR(500);
+    }
+  } else if (pb->prekey) {
+    if ((rc = sqlite3_bind_blob(stmt_update, 1, BUF(pb->prekey->key),
+                                SQLITE_STATIC)) != SQLITE_OK ||
+        (rc = sqlite3_bind_int64(stmt_update, 2, pb->prekey->id)) !=
+            SQLITE_OK ||
+        (rc = sqlite3_bind_blob(stmt_update, 3, BUF(pb->prekey->sig),
+                                SQLITE_STATIC)) != SQLITE_OK ||
+        (rc = sqlite3_bind_int64(stmt_update, 4, id)) != SQLITE_OK) {
+      fprintf(stderr, "[%s:%d] bind update spk failed: %d (%s)\n", __func__,
+              __LINE__, rc, sqlite3_errmsg(db));
+      sqlite3_exec(db, "rollback;", NULL, NULL, NULL);
+      ERR(500);
+    }
+  } else if (pb->pqkem_prekey) {
+    if ((rc = sqlite3_bind_blob(stmt_update, 1, BUF(pb->pqkem_prekey->key),
+                                SQLITE_STATIC)) != SQLITE_OK ||
+        (rc = sqlite3_bind_int64(stmt_update, 2, pb->pqkem_prekey->id)) !=
+            SQLITE_OK ||
+        (rc = sqlite3_bind_blob(stmt_update, 3, BUF(pb->pqkem_prekey->sig),
+                                SQLITE_STATIC)) != SQLITE_OK ||
+        (rc = sqlite3_bind_int64(stmt_update, 4, id)) != SQLITE_OK) {
+      fprintf(stderr, "[%s:%d] bind update pqspk failed: %d (%s)\n", __func__,
+              __LINE__, rc, sqlite3_errmsg(db));
+      sqlite3_exec(db, "rollback;", NULL, NULL, NULL);
+      ERR(500);
+    }
+  }
+
+  if (stmt_update) {
+    if ((rc = sqlite3_step(stmt_update)) != SQLITE_DONE) {
+      fprintf(stderr, "[%s:%d] step update failed: %d (%s)\n", __func__,
+              __LINE__, rc, sqlite3_errmsg(db));
+      sqlite3_exec(db, "rollback;", NULL, NULL, NULL);
+      ERR(500);
+    }
+  }
+
+  if (pb->n_one_time_pqkem_prekeys > 0) {
+    if ((rc = sqlite3_prepare_v3(db, sql_insert_pqopk, -1, 0,
+                                 &stmt_insert_pqopk, NULL)) != SQLITE_OK) {
+      fprintf(stderr, "[%s:%d] prepare insert pqopk failed: %d (%s)\n",
+              __func__, __LINE__, rc, sqlite3_errmsg(db));
+      sqlite3_exec(db, "rollback;", NULL, NULL, NULL);
+      ERR(500);
+    }
+
+    for (size_t i = 0; i < pb->n_one_time_pqkem_prekeys; ++i) {
+      Messages__SignedPrekey *pqopk = pb->one_time_pqkem_prekeys[i];
+
+      if ((rc = sqlite3_bind_int64(stmt_insert_pqopk, 1, id)) != SQLITE_OK ||
+          (rc = sqlite3_bind_blob(stmt_insert_pqopk, 2, BUF(pqopk->key),
+                                  SQLITE_STATIC)) != SQLITE_OK ||
+          (rc = sqlite3_bind_int64(stmt_insert_pqopk, 3, pqopk->id)) !=
+              SQLITE_OK ||
+          (rc = sqlite3_bind_blob(stmt_insert_pqopk, 4, BUF(pqopk->sig),
+                                  SQLITE_STATIC)) != SQLITE_OK) {
+        fprintf(stderr, "[%s:%d] bind insert pqopk failed: %d (%s)\n", __func__,
+                __LINE__, rc, sqlite3_errmsg(db));
+        sqlite3_exec(db, "rollback;", NULL, NULL, NULL);
+        ERR(500);
+      }
+
+      if ((rc = sqlite3_step(stmt_insert_pqopk)) != SQLITE_DONE) {
+        fprintf(stderr, "[%s:%d] step insert pqopk failed: %d (%s)\n", __func__,
+                __LINE__, rc, sqlite3_errmsg(db));
+        sqlite3_exec(db, "rollback;", NULL, NULL, NULL);
+        ERR(500);
+      }
+
+      sqlite3_reset(stmt_insert_pqopk);
+      sqlite3_clear_bindings(stmt_insert_pqopk);
+    }
+  }
+
+  if (pb->n_one_time_prekeys > 0) {
+    if ((rc = sqlite3_prepare_v3(db, sql_insert_opk, -1, 0, &stmt_insert_opk,
+                                 NULL)) != SQLITE_OK) {
+      fprintf(stderr, "[%s:%d] prepare insert opk failed: %d (%s)\n", __func__,
+              __LINE__, rc, sqlite3_errmsg(db));
+      sqlite3_exec(db, "rollback;", NULL, NULL, NULL);
+      ERR(500);
+    }
+
+    for (size_t i = 0; i < pb->n_one_time_prekeys; ++i) {
+      Messages__Prekey *opk = pb->one_time_prekeys[i];
+
+      if ((rc = sqlite3_bind_int64(stmt_insert_opk, 1, id)) != SQLITE_OK ||
+          (rc = sqlite3_bind_blob(stmt_insert_opk, 2, BUF(opk->key),
+                                  SQLITE_STATIC)) != SQLITE_OK ||
+          (rc = sqlite3_bind_int64(stmt_insert_opk, 3, opk->id)) != SQLITE_OK) {
+        fprintf(stderr, "[%s:%d] bind insert opk failed: %d (%s)\n", __func__,
+                __LINE__, rc, sqlite3_errmsg(db));
+        sqlite3_exec(db, "rollback;", NULL, NULL, NULL);
+        ERR(500);
+      }
+
+      if ((rc = sqlite3_step(stmt_insert_opk)) != SQLITE_DONE) {
+        fprintf(stderr, "[%s:%d] step insert opk failed: %d (%s)\n", __func__,
+                __LINE__, rc, sqlite3_errmsg(db));
+        sqlite3_exec(db, "rollback;", NULL, NULL, NULL);
+        ERR(500);
+      }
+
+      sqlite3_reset(stmt_insert_opk);
+      sqlite3_clear_bindings(stmt_insert_opk);
+    }
+  }
+
+  if ((rc = sqlite3_exec(db, "commit;", NULL, NULL, NULL)) != SQLITE_OK) {
+    fprintf(stderr, "[%s:%d] commit failed: %d (%s)\n", __func__, __LINE__, rc,
+            sqlite3_errmsg(db));
+    ERR(500);
+  }
+
+  status_code = 200;
+
+err:
+  if (id_key) free(id_key);
+  if (pb) messages__identity_patch__free_unpacked(pb, NULL);
+  if (stmt_update) sqlite3_finalize(stmt_update);
+  if (stmt_insert_pqopk) sqlite3_finalize(stmt_insert_pqopk);
+  if (stmt_insert_opk) sqlite3_finalize(stmt_insert_opk);
+  mg_http_reply(c, status_code, NEW_IDENTITY_REPLY_HEADERS, "");
+}
+
 void handle_identity_request(struct mg_connection *c,
                              struct mg_http_message *hm) {
   if (mg_strcmp(hm->method, mg_str("POST")) == 0) {
     handle_identity_POST_request(c, hm);
+  } else if (mg_strcmp(hm->method, mg_str("PATCH")) == 0) {
+    handle_identity_PATCH_request(c, hm);
   } else {
     mg_http_reply(c, 405, NEW_IDENTITY_REPLY_HEADERS, "");
   }

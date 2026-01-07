@@ -97,49 +97,94 @@ void   websocket__challenge_response__free_unpacked
   assert(message->base.descriptor == &websocket__challenge_response__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
-void   websocket__keys_used__init
-                     (Websocket__KeysUsed         *message)
+void   websocket__pqxdhinit__init
+                     (Websocket__PQXDHInit         *message)
 {
-  static const Websocket__KeysUsed init_value = WEBSOCKET__KEYS_USED__INIT;
+  static const Websocket__PQXDHInit init_value = WEBSOCKET__PQXDHINIT__INIT;
   *message = init_value;
 }
-size_t websocket__keys_used__get_packed_size
-                     (const Websocket__KeysUsed *message)
+size_t websocket__pqxdhinit__get_packed_size
+                     (const Websocket__PQXDHInit *message)
 {
-  assert(message->base.descriptor == &websocket__keys_used__descriptor);
+  assert(message->base.descriptor == &websocket__pqxdhinit__descriptor);
   return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
 }
-size_t websocket__keys_used__pack
-                     (const Websocket__KeysUsed *message,
+size_t websocket__pqxdhinit__pack
+                     (const Websocket__PQXDHInit *message,
                       uint8_t       *out)
 {
-  assert(message->base.descriptor == &websocket__keys_used__descriptor);
+  assert(message->base.descriptor == &websocket__pqxdhinit__descriptor);
   return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
 }
-size_t websocket__keys_used__pack_to_buffer
-                     (const Websocket__KeysUsed *message,
+size_t websocket__pqxdhinit__pack_to_buffer
+                     (const Websocket__PQXDHInit *message,
                       ProtobufCBuffer *buffer)
 {
-  assert(message->base.descriptor == &websocket__keys_used__descriptor);
+  assert(message->base.descriptor == &websocket__pqxdhinit__descriptor);
   return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
 }
-Websocket__KeysUsed *
-       websocket__keys_used__unpack
+Websocket__PQXDHInit *
+       websocket__pqxdhinit__unpack
                      (ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data)
 {
-  return (Websocket__KeysUsed *)
-     protobuf_c_message_unpack (&websocket__keys_used__descriptor,
+  return (Websocket__PQXDHInit *)
+     protobuf_c_message_unpack (&websocket__pqxdhinit__descriptor,
                                 allocator, len, data);
 }
-void   websocket__keys_used__free_unpacked
-                     (Websocket__KeysUsed *message,
+void   websocket__pqxdhinit__free_unpacked
+                     (Websocket__PQXDHInit *message,
                       ProtobufCAllocator *allocator)
 {
   if(!message)
     return;
-  assert(message->base.descriptor == &websocket__keys_used__descriptor);
+  assert(message->base.descriptor == &websocket__pqxdhinit__descriptor);
+  protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
+}
+void   websocket__forward__init
+                     (Websocket__Forward         *message)
+{
+  static const Websocket__Forward init_value = WEBSOCKET__FORWARD__INIT;
+  *message = init_value;
+}
+size_t websocket__forward__get_packed_size
+                     (const Websocket__Forward *message)
+{
+  assert(message->base.descriptor == &websocket__forward__descriptor);
+  return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
+}
+size_t websocket__forward__pack
+                     (const Websocket__Forward *message,
+                      uint8_t       *out)
+{
+  assert(message->base.descriptor == &websocket__forward__descriptor);
+  return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
+}
+size_t websocket__forward__pack_to_buffer
+                     (const Websocket__Forward *message,
+                      ProtobufCBuffer *buffer)
+{
+  assert(message->base.descriptor == &websocket__forward__descriptor);
+  return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
+}
+Websocket__Forward *
+       websocket__forward__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data)
+{
+  return (Websocket__Forward *)
+     protobuf_c_message_unpack (&websocket__forward__descriptor,
+                                allocator, len, data);
+}
+void   websocket__forward__free_unpacked
+                     (Websocket__Forward *message,
+                      ProtobufCAllocator *allocator)
+{
+  if(!message)
+    return;
+  assert(message->base.descriptor == &websocket__forward__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
 void   websocket__envelope__init
@@ -276,68 +321,145 @@ const ProtobufCMessageDescriptor websocket__challenge_response__descriptor =
   (ProtobufCMessageInit) websocket__challenge_response__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor websocket__keys_used__field_descriptors[3] =
+static const ProtobufCFieldDescriptor websocket__pqxdhinit__field_descriptors[5] =
 {
   {
-    "ids",
+    "id_key",
     1,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_BYTES,
+    0,   /* quantifier_offset */
+    offsetof(Websocket__PQXDHInit, id_key),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "ephemeral_key",
+    2,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_BYTES,
+    0,   /* quantifier_offset */
+    offsetof(Websocket__PQXDHInit, ephemeral_key),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "pqkem_ciphertext",
+    3,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_BYTES,
+    0,   /* quantifier_offset */
+    offsetof(Websocket__PQXDHInit, pqkem_ciphertext),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "prekey_ids",
+    4,
     PROTOBUF_C_LABEL_REPEATED,
     PROTOBUF_C_TYPE_INT64,
-    offsetof(Websocket__KeysUsed, n_ids),
-    offsetof(Websocket__KeysUsed, ids),
+    offsetof(Websocket__PQXDHInit, n_prekey_ids),
+    offsetof(Websocket__PQXDHInit, prekey_ids),
     NULL,
     NULL,
     PROTOBUF_C_FIELD_FLAG_PACKED,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "opks_remaining",
-    2,
+    "initial_ciphertext",
+    5,
     PROTOBUF_C_LABEL_REQUIRED,
-    PROTOBUF_C_TYPE_INT64,
+    PROTOBUF_C_TYPE_BYTES,
     0,   /* quantifier_offset */
-    offsetof(Websocket__KeysUsed, opks_remaining),
+    offsetof(Websocket__PQXDHInit, initial_ciphertext),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+};
+static const unsigned websocket__pqxdhinit__field_indices_by_name[] = {
+  1,   /* field[1] = ephemeral_key */
+  0,   /* field[0] = id_key */
+  4,   /* field[4] = initial_ciphertext */
+  2,   /* field[2] = pqkem_ciphertext */
+  3,   /* field[3] = prekey_ids */
+};
+static const ProtobufCIntRange websocket__pqxdhinit__number_ranges[1 + 1] =
+{
+  { 1, 0 },
+  { 0, 5 }
+};
+const ProtobufCMessageDescriptor websocket__pqxdhinit__descriptor =
+{
+  PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "websocket.PQXDHInit",
+  "PQXDHInit",
+  "Websocket__PQXDHInit",
+  "websocket",
+  sizeof(Websocket__PQXDHInit),
+  5,
+  websocket__pqxdhinit__field_descriptors,
+  websocket__pqxdhinit__field_indices_by_name,
+  1,  websocket__pqxdhinit__number_ranges,
+  (ProtobufCMessageInit) websocket__pqxdhinit__init,
+  NULL,NULL,NULL    /* reserved[123] */
+};
+static const ProtobufCFieldDescriptor websocket__forward__field_descriptors[2] =
+{
+  {
+    "handle",
+    1,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_STRING,
+    0,   /* quantifier_offset */
+    offsetof(Websocket__Forward, handle),
     NULL,
     NULL,
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "pqopks_remaining",
-    3,
-    PROTOBUF_C_LABEL_REQUIRED,
-    PROTOBUF_C_TYPE_INT64,
-    0,   /* quantifier_offset */
-    offsetof(Websocket__KeysUsed, pqopks_remaining),
+    "pqxdh_init",
+    2,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_MESSAGE,
+    offsetof(Websocket__Forward, payload_case),
+    offsetof(Websocket__Forward, pqxdh_init),
+    &websocket__pqxdhinit__descriptor,
     NULL,
-    NULL,
-    0,             /* flags */
+    PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
 };
-static const unsigned websocket__keys_used__field_indices_by_name[] = {
-  0,   /* field[0] = ids */
-  1,   /* field[1] = opks_remaining */
-  2,   /* field[2] = pqopks_remaining */
+static const unsigned websocket__forward__field_indices_by_name[] = {
+  0,   /* field[0] = handle */
+  1,   /* field[1] = pqxdh_init */
 };
-static const ProtobufCIntRange websocket__keys_used__number_ranges[1 + 1] =
+static const ProtobufCIntRange websocket__forward__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 3 }
+  { 0, 2 }
 };
-const ProtobufCMessageDescriptor websocket__keys_used__descriptor =
+const ProtobufCMessageDescriptor websocket__forward__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
-  "websocket.KeysUsed",
-  "KeysUsed",
-  "Websocket__KeysUsed",
+  "websocket.Forward",
+  "Forward",
+  "Websocket__Forward",
   "websocket",
-  sizeof(Websocket__KeysUsed),
-  3,
-  websocket__keys_used__field_descriptors,
-  websocket__keys_used__field_indices_by_name,
-  1,  websocket__keys_used__number_ranges,
-  (ProtobufCMessageInit) websocket__keys_used__init,
+  sizeof(Websocket__Forward),
+  2,
+  websocket__forward__field_descriptors,
+  websocket__forward__field_indices_by_name,
+  1,  websocket__forward__number_ranges,
+  (ProtobufCMessageInit) websocket__forward__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
 static const ProtobufCFieldDescriptor websocket__envelope__field_descriptors[3] =
@@ -367,13 +489,13 @@ static const ProtobufCFieldDescriptor websocket__envelope__field_descriptors[3] 
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "keys_used",
+    "forward",
     3,
     PROTOBUF_C_LABEL_OPTIONAL,
     PROTOBUF_C_TYPE_MESSAGE,
     offsetof(Websocket__Envelope, payload_case),
-    offsetof(Websocket__Envelope, keys_used),
-    &websocket__keys_used__descriptor,
+    offsetof(Websocket__Envelope, forward),
+    &websocket__forward__descriptor,
     NULL,
     PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
@@ -382,7 +504,7 @@ static const ProtobufCFieldDescriptor websocket__envelope__field_descriptors[3] 
 static const unsigned websocket__envelope__field_indices_by_name[] = {
   0,   /* field[0] = challenge */
   1,   /* field[1] = challenge_response */
-  2,   /* field[2] = keys_used */
+  2,   /* field[2] = forward */
 };
 static const ProtobufCIntRange websocket__envelope__number_ranges[1 + 1] =
 {

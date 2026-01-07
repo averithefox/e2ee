@@ -28,7 +28,7 @@ void handle_prekey_bundle_request(struct mg_connection *c,
 
   if (mg_strcmp(hm->method, mg_str("GET")) != 0) ERR(405);
 
-  int64_t _id = verify_request(hm);
+  int64_t _id = verify_request(hm, NULL);
   if (_id < 0) ERR(-_id);
 
   // clang-format off
@@ -43,8 +43,8 @@ void handle_prekey_bundle_request(struct mg_connection *c,
       "pqspk_id,"
       "pqspk_sig "
     "from identities where handle = ?;";
-  const char *sql1 = "select uid,bytes,id,sig from pqopks where `for` = ? and used = 0 order by uid asc limit 1;";
-  const char *sql2 = "select uid,bytes,id from opks where `for` = ? and used = 0 order by uid asc limit 1;";
+  const char *sql1 = "select uid,bytes,id,sig from pqopks where `for` = ? order by uid asc limit 1;";
+  const char *sql2 = "select uid,bytes,id from opks where `for` = ? order by uid asc limit 1;";
   // clang-format on
 
   if (sqlite3_prepare_v3(db, sql0, -1, 0, &stmt0, NULL) != SQLITE_OK) {
@@ -152,12 +152,16 @@ void handle_prekey_bundle_request(struct mg_connection *c,
   }
 
   messages__pqxdhkey_bundle__pack(&pb, pb_buf);
-  mg_http_reply(c, 200,
-                PREKEY_BUNDLE_REPLY_HEADERS
-                "Content-Type: application/protobuf; "
-                "proto=messages.PQXDHKeyBundle\r\n"
-                "Cache-Control: private, max-age=60\r\n",
-                "%.*s", pb_len, pb_buf);
+  mg_printf(c,
+            "HTTP/1.1 200 OK\r\n" PREKEY_BUNDLE_REPLY_HEADERS
+            "Content-Type: application/protobuf; "
+            "proto=messages.PQXDHKeyBundle\r\n"
+            "Cache-Control: private, max-age=60\r\n"
+            "Content-Length: %d\r\n"
+            "\r\n",
+            (int)pb_len);
+  mg_send(c, pb_buf, pb_len);
+  c->is_resp = 0;
 
   if (stmt0) sqlite3_finalize(stmt0);
   if (stmt1) sqlite3_finalize(stmt1);
@@ -165,7 +169,7 @@ void handle_prekey_bundle_request(struct mg_connection *c,
 
   if (pqopk_id != -1) {
     sqlite3_stmt *stmt = NULL;
-    const char *sql = "update pqopks set used = 1 where uid = ?;";
+    const char *sql = "delete from pqopks where uid = ?;";
     if (sqlite3_prepare_v3(db, sql, -1, 0, &stmt, NULL) >= 0) {
       if (sqlite3_bind_int64(stmt, 1, pqopk_id) >= 0) {
         if (sqlite3_step(stmt) != SQLITE_DONE) {
@@ -185,7 +189,7 @@ void handle_prekey_bundle_request(struct mg_connection *c,
 
   if (opk_id != -1) {
     sqlite3_stmt *stmt = NULL;
-    const char *sql = "update opks set used = 1 where uid = ?;";
+    const char *sql = "delete from opks where uid = ?;";
     if (sqlite3_prepare_v3(db, sql, -1, 0, &stmt, NULL) >= 0) {
       if (sqlite3_bind_int64(stmt, 1, opk_id) >= 0) {
         if (sqlite3_step(stmt) != SQLITE_DONE) {
