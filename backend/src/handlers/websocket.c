@@ -167,6 +167,13 @@ cleanup:
 void handle_ws_authenticated(struct mg_connection *c) {
   sqlite3_stmt *stmt_select = NULL, *stmt_delete = NULL;
 
+  struct ws_ctx *ctx = c->fn_data;
+  if (!ctx || ctx->id == -1) {
+    fprintf(stderr, "[%s:%d] context invalid or missing\n", __func__, __LINE__);
+    c->is_draining = 1;
+    goto err;
+  }
+
   int rc;
   if ((rc = sqlite3_prepare_v3(
            db,
@@ -179,7 +186,7 @@ void handle_ws_authenticated(struct mg_connection *c) {
     goto err;
   }
 
-  if ((rc = sqlite3_bind_int64(stmt_select, 1, c->id)) != SQLITE_OK) {
+  if ((rc = sqlite3_bind_int64(stmt_select, 1, ctx->id)) != SQLITE_OK) {
     fprintf(stderr, "[%s:%d] bind failed: %d (%s)\n", __func__, __LINE__, rc,
             sqlite3_errmsg(db));
     goto err;
@@ -190,7 +197,7 @@ void handle_ws_authenticated(struct mg_connection *c) {
     const void *msg_buf = sqlite3_column_blob(stmt_select, 1);
     int msg_len = sqlite3_column_bytes(stmt_select, 1);
 
-    ws_send_by_id(c->mgr, c->id, msg_buf, msg_len);
+    ws_send_by_id(c->mgr, ctx->id, msg_buf, msg_len);
 
     if ((rc = sqlite3_bind_int64(stmt_delete, 1, id)) != SQLITE_OK) {
       fprintf(stderr, "[%s:%d] bind failed: %d (%s)\n", __func__, __LINE__, rc,
@@ -220,6 +227,13 @@ err:
 void handle_ws_forward_pb(struct mg_connection *c, Websocket__Forward *msg) {
   sqlite3_stmt *stmt_id_by_handle = NULL, *stmt_handle_by_id = NULL;
 
+  struct ws_ctx *ctx = c->fn_data;
+  if (!ctx || ctx->id == -1) {
+    fprintf(stderr, "[%s:%d] context invalid or missing\n", __func__, __LINE__);
+    c->is_draining = 1;
+    goto err;
+  }
+
   int rc;
   if ((rc =
            sqlite3_prepare_v3(db, "select id from identities where handle = ?;",
@@ -234,7 +248,7 @@ void handle_ws_forward_pb(struct mg_connection *c, Websocket__Forward *msg) {
 
   if ((rc = sqlite3_bind_text(stmt_id_by_handle, 1, msg->handle, -1,
                               SQLITE_STATIC)) != SQLITE_OK ||
-      (rc = sqlite3_bind_int64(stmt_handle_by_id, 1, c->id)) != SQLITE_OK) {
+      (rc = sqlite3_bind_int64(stmt_handle_by_id, 1, ctx->id)) != SQLITE_OK) {
     fprintf(stderr, "[%s:%d] bind failed: %d (%s)\n", __func__, __LINE__, rc,
             sqlite3_errmsg(db));
     goto err;

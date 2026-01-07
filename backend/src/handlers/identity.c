@@ -24,11 +24,9 @@
 #define BUF(STRUCT) (STRUCT).data, (STRUCT).len
 
 static int verify_xeddsa_signature(const Messages__SignedPrekey *pb,
-                                   const ProtobufCBinaryData *pk) {
-  if (!pb || pb->sig.len != XEDDSA_SIGNATURE_LENGTH || !pk ||
-      pk->len != CURVE25519_PUBLIC_KEY_LENGTH)
-    return 0;
-  return xeddsa_verify(pk->data, BUF(pb->key), pb->sig.data);
+                                   const void *pk) {
+  if (!pb || pb->sig.len != XEDDSA_SIGNATURE_LENGTH || !pk) return 0;
+  return xeddsa_verify(pk, BUF(pb->key), pb->sig.data);
 }
 
 static void handle_identity_POST_request(struct mg_connection *c,
@@ -43,19 +41,21 @@ static void handle_identity_POST_request(struct mg_connection *c,
     ERR(400);
   }
 
-  if (pb->prekey->key.len != CURVE25519_PUBLIC_KEY_LENGTH) {
-    fprintf(stderr, "[%s:%d] invalid prekey\n", __func__, __LINE__);
+  if (pb->id_key.len != CURVE25519_PUBLIC_KEY_LENGTH ||
+      pb->prekey->key.len != CURVE25519_PUBLIC_KEY_LENGTH) {
+    fprintf(stderr, "[%s:%d] invalid key\n", __func__, __LINE__);
     ERR(400);
   }
 
-  if (!verify_xeddsa_signature(pb->prekey, &pb->id_key) ||
-      !verify_xeddsa_signature(pb->pqkem_prekey, &pb->id_key)) {
+  if (!verify_xeddsa_signature(pb->prekey, pb->id_key.data) ||
+      !verify_xeddsa_signature(pb->pqkem_prekey, pb->id_key.data)) {
     fprintf(stderr, "[%s:%d] invalid signature\n", __func__, __LINE__);
     ERR(400);
   }
 
   for (size_t i = 0; i < pb->n_one_time_pqkem_prekeys; ++i) {
-    if (!verify_xeddsa_signature(pb->one_time_pqkem_prekeys[i], &pb->id_key)) {
+    if (!verify_xeddsa_signature(pb->one_time_pqkem_prekeys[i],
+                                 pb->id_key.data)) {
       fprintf(stderr, "[%s:%d] invalid signature for PQOPK at [%zu]\n",
               __func__, __LINE__, i);
       ERR(400);
