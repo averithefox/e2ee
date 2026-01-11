@@ -5,7 +5,7 @@ import { db } from './db';
 import { genKeys } from './protocol';
 import { b64Encode } from './utils';
 
-export const API_BASE_URL = 'http://localhost:8000';
+export const API_BASE_URL = process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : window.location.origin;
 
 export async function fetch(url: string, { method = 'GET', ...rest }: RequestInit & { body?: Uint8Array | null } = {}) {
   const identity = await db.identity.limit(1).first();
@@ -102,12 +102,10 @@ export async function registerIdentity(handle: string) {
   });
 
   if (!res.ok) {
-    throw new Error(`Failed to create identity for ${handle}: ${res.statusText}`);
+    throw new Error(res.statusText);
   }
 
   await db.identity.add({ handle, priv: keys.idKey.privateKey, pub: keys.idKey.publicKey });
-
-  return res;
 }
 
 export async function fetchKeyBundle(

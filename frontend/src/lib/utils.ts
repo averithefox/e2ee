@@ -30,3 +30,11 @@ export function b64Encode(bytes: Uint8Array) {
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
+
+export function formatFingerprint(key: Uint8Array): string {
+  const hex = Array.from(key)
+    .map(b => b.toString(16).padStart(2, '0').toUpperCase())
+    .join('');
+  // Group into 4-char chunks separated by spaces
+  return hex.match(/.{1,4}/g)?.join(' ') ?? hex;
+}

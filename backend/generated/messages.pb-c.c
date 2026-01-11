@@ -232,6 +232,57 @@ void   messages__identity_patch__free_unpacked
   assert(message->base.descriptor == &messages__identity_patch__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
+void   messages__message_payload__attachment__init
+                     (Messages__MessagePayload__Attachment         *message)
+{
+  static const Messages__MessagePayload__Attachment init_value = MESSAGES__MESSAGE_PAYLOAD__ATTACHMENT__INIT;
+  *message = init_value;
+}
+void   messages__message_payload__init
+                     (Messages__MessagePayload         *message)
+{
+  static const Messages__MessagePayload init_value = MESSAGES__MESSAGE_PAYLOAD__INIT;
+  *message = init_value;
+}
+size_t messages__message_payload__get_packed_size
+                     (const Messages__MessagePayload *message)
+{
+  assert(message->base.descriptor == &messages__message_payload__descriptor);
+  return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
+}
+size_t messages__message_payload__pack
+                     (const Messages__MessagePayload *message,
+                      uint8_t       *out)
+{
+  assert(message->base.descriptor == &messages__message_payload__descriptor);
+  return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
+}
+size_t messages__message_payload__pack_to_buffer
+                     (const Messages__MessagePayload *message,
+                      ProtobufCBuffer *buffer)
+{
+  assert(message->base.descriptor == &messages__message_payload__descriptor);
+  return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
+}
+Messages__MessagePayload *
+       messages__message_payload__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data)
+{
+  return (Messages__MessagePayload *)
+     protobuf_c_message_unpack (&messages__message_payload__descriptor,
+                                allocator, len, data);
+}
+void   messages__message_payload__free_unpacked
+                     (Messages__MessagePayload *message,
+                      ProtobufCAllocator *allocator)
+{
+  if(!message)
+    return;
+  assert(message->base.descriptor == &messages__message_payload__descriptor);
+  protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
+}
 static const ProtobufCFieldDescriptor messages__prekey__field_descriptors[2] =
 {
   {
@@ -602,5 +653,107 @@ const ProtobufCMessageDescriptor messages__identity_patch__descriptor =
   messages__identity_patch__field_indices_by_name,
   1,  messages__identity_patch__number_ranges,
   (ProtobufCMessageInit) messages__identity_patch__init,
+  NULL,NULL,NULL    /* reserved[123] */
+};
+static const ProtobufCFieldDescriptor messages__message_payload__attachment__field_descriptors[2] =
+{
+  {
+    "mime_type",
+    1,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_STRING,
+    0,   /* quantifier_offset */
+    offsetof(Messages__MessagePayload__Attachment, mime_type),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "data",
+    2,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_BYTES,
+    0,   /* quantifier_offset */
+    offsetof(Messages__MessagePayload__Attachment, data),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+};
+static const unsigned messages__message_payload__attachment__field_indices_by_name[] = {
+  1,   /* field[1] = data */
+  0,   /* field[0] = mime_type */
+};
+static const ProtobufCIntRange messages__message_payload__attachment__number_ranges[1 + 1] =
+{
+  { 1, 0 },
+  { 0, 2 }
+};
+const ProtobufCMessageDescriptor messages__message_payload__attachment__descriptor =
+{
+  PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "messages.MessagePayload.Attachment",
+  "Attachment",
+  "Messages__MessagePayload__Attachment",
+  "messages",
+  sizeof(Messages__MessagePayload__Attachment),
+  2,
+  messages__message_payload__attachment__field_descriptors,
+  messages__message_payload__attachment__field_indices_by_name,
+  1,  messages__message_payload__attachment__number_ranges,
+  (ProtobufCMessageInit) messages__message_payload__attachment__init,
+  NULL,NULL,NULL    /* reserved[123] */
+};
+static const ProtobufCFieldDescriptor messages__message_payload__field_descriptors[2] =
+{
+  {
+    "text",
+    1,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_STRING,
+    0,   /* quantifier_offset */
+    offsetof(Messages__MessagePayload, text),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "attachments",
+    2,
+    PROTOBUF_C_LABEL_REPEATED,
+    PROTOBUF_C_TYPE_MESSAGE,
+    offsetof(Messages__MessagePayload, n_attachments),
+    offsetof(Messages__MessagePayload, attachments),
+    &messages__message_payload__attachment__descriptor,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+};
+static const unsigned messages__message_payload__field_indices_by_name[] = {
+  1,   /* field[1] = attachments */
+  0,   /* field[0] = text */
+};
+static const ProtobufCIntRange messages__message_payload__number_ranges[1 + 1] =
+{
+  { 1, 0 },
+  { 0, 2 }
+};
+const ProtobufCMessageDescriptor messages__message_payload__descriptor =
+{
+  PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "messages.MessagePayload",
+  "MessagePayload",
+  "Messages__MessagePayload",
+  "messages",
+  sizeof(Messages__MessagePayload),
+  2,
+  messages__message_payload__field_descriptors,
+  messages__message_payload__field_indices_by_name,
+  1,  messages__message_payload__number_ranges,
+  (ProtobufCMessageInit) messages__message_payload__init,
   NULL,NULL,NULL    /* reserved[123] */
 };

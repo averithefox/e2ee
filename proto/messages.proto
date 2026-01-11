@@ -39,3 +39,13 @@ message IdentityPatch {
   repeated SignedPrekey one_time_pqkem_prekeys = 4;
   repeated Prekey one_time_prekeys = 5;
 }
+
+message MessagePayload {
+  message Attachment {
+    required string mime_type = 1;
+    required bytes data = 2;
+  }
+
+  optional string text = 1;
+  repeated Attachment attachments = 2;
+}

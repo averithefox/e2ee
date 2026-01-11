@@ -2,7 +2,7 @@ import { x25519 } from '@noble/curves/ed25519.js';
 import { hkdf } from '@noble/hashes/hkdf.js';
 import { hmac } from '@noble/hashes/hmac.js';
 import { sha256, sha512 } from '@noble/hashes/sha2.js';
-import type { messages } from 'generated/messages';
+import { messages } from 'generated/messages';
 import { websocket } from 'generated/websocket';
 import sodium from 'libsodium-wrappers';
 import { MlKem1024 } from 'mlkem';
@@ -171,7 +171,7 @@ export function verifyKeyBundle(bundle: messages.PQXDHKeyBundle, idKeyOverride?:
 
 export async function sendMessage(
   to: string,
-  content: string,
+  payload: messages.MessagePayload,
   keyBundleProvider?: (handle: string) => ResultPromise<messages.PQXDHKeyBundle, any>
 ) {
   const identity = await db.identity.limit(1).first();
@@ -223,7 +223,7 @@ export async function sendMessage(
     session.id = await db.sessions.add(session);
 
     const AD = concat(identity.pub, bundle.id_key, encoder.encode(identity.handle), encoder.encode(to));
-    const { header, ciphertext, nonce } = await encrypt(session, encoder.encode(content), AD);
+    const { header, ciphertext, nonce } = await encrypt(session, payload.serialize(), AD);
 
     await db.sessions.put(session);
 
@@ -247,7 +247,7 @@ export async function sendMessage(
     });
   } else {
     const AD = encoder.encode(identity.handle + to);
-    const { header, ciphertext, nonce } = await encrypt(session, encoder.encode(content), AD);
+    const { header, ciphertext, nonce } = await encrypt(session, payload.serialize(), AD);
     return new websocket.Forward({
       handle: to,
       message: new websocket.EncryptedMessage({ header, ciphertext, nonce })
@@ -323,14 +323,14 @@ export async function recvMessage(pb: websocket.Forward) {
 
     await db.sessions.put(session);
 
-    return new TextDecoder().decode(plaintext);
+    return messages.MessagePayload.deserialize(plaintext);
   } else if (pb.payload === 'message') {
     const session = await db.sessions.where({ peer: pb.handle }).first();
     if (!session) throw new Error('No session');
     const msg = pb.message;
     const AD = encoder.encode(pb.handle + identity.handle);
     const plaintext = await decrypt(session, msg.header, msg.ciphertext, msg.nonce, AD);
-    return new TextDecoder().decode(plaintext);
+    return messages.MessagePayload.deserialize(plaintext);
   } else {
     throw new Error('unknown payload');
   }
@@ -342,27 +342,21 @@ async function getLocalKey() {
   return hkdf(sha256, identity.priv, new Uint8Array(0), new TextEncoder().encode('me.averi.chat_LocalEncryption'), 32);
 }
 
-export async function encryptLocal(plaintext: string): Promise<{ ciphertext: Uint8Array; nonce: Uint8Array }> {
+export async function encryptLocal(plaintext: Uint8Array): Promise<{ ciphertext: Uint8Array; nonce: Uint8Array }> {
   const key = await getLocalKey();
   const nonce = randomBytes(24);
-  await sodium.ready;
 
-  const ciphertext = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(
-    new TextEncoder().encode(plaintext),
-    null,
-    null,
-    nonce,
-    key
-  );
+  await sodium.ready;
+  const ciphertext = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(plaintext, null, null, nonce, key);
 
   return { ciphertext, nonce };
 }
 
-export async function decryptLocal(ciphertext: Uint8Array, nonce: Uint8Array): Promise<string> {
+export async function decryptLocal(ciphertext: Uint8Array, nonce: Uint8Array): Promise<Uint8Array> {
   const key = await getLocalKey();
-  await sodium.ready;
 
+  await sodium.ready;
   const plaintext = sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(null, ciphertext, null, nonce, key);
 
-  return new TextDecoder().decode(plaintext);
+  return plaintext;
 }

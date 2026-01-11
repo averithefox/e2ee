@@ -69,3 +69,7 @@ db.version(1).stores({
   skipped_message_keys: '++id,[session_id+dh_public_key+message_number]',
   messages: '++id,peer,sender'
 });
+
+if (process.env.NODE_ENV === 'development') {
+  (window as any).db = db;
+}

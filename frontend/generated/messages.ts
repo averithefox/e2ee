@@ -648,4 +648,185 @@ export namespace messages {
             return IdentityPatch.deserialize(bytes);
         }
     }
+    export class MessagePayload extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {
+            text?: string;
+            attachments: MessagePayload.Attachment[];
+        }) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [2], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") {
+                if ("text" in data && data.text != undefined) {
+                    this.text = data.text;
+                }
+                this.attachments = data.attachments;
+            }
+        }
+        get text() {
+            return pb_1.Message.getFieldWithDefault(this, 1, "") as string;
+        }
+        set text(value: string) {
+            pb_1.Message.setField(this, 1, value);
+        }
+        get has_text() {
+            return pb_1.Message.getField(this, 1) != null;
+        }
+        get attachments() {
+            return pb_1.Message.getRepeatedWrapperField(this, MessagePayload.Attachment, 2) as MessagePayload.Attachment[];
+        }
+        set attachments(value: MessagePayload.Attachment[]) {
+            pb_1.Message.setRepeatedWrapperField(this, 2, value);
+        }
+        static fromObject(data: {
+            text?: string;
+            attachments?: ReturnType<typeof MessagePayload.Attachment.prototype.toObject>[];
+        }): MessagePayload {
+            const message = new MessagePayload({
+                attachments: data.attachments.map(item => MessagePayload.Attachment.fromObject(item))
+            });
+            if (data.text != null) {
+                message.text = data.text;
+            }
+            return message;
+        }
+        toObject() {
+            const data: {
+                text?: string;
+                attachments?: ReturnType<typeof MessagePayload.Attachment.prototype.toObject>[];
+            } = {};
+            if (this.text != null) {
+                data.text = this.text;
+            }
+            if (this.attachments != null) {
+                data.attachments = this.attachments.map((item: MessagePayload.Attachment) => item.toObject());
+            }
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (this.has_text && this.text.length)
+                writer.writeString(1, this.text);
+            if (this.attachments.length)
+                writer.writeRepeatedMessage(2, this.attachments, (item: MessagePayload.Attachment) => item.serialize(writer));
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): MessagePayload {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new MessagePayload();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    case 1:
+                        message.text = reader.readString();
+                        break;
+                    case 2:
+                        reader.readMessage(message.attachments, () => pb_1.Message.addToRepeatedWrapperField(message, 2, MessagePayload.Attachment.deserialize(reader), MessagePayload.Attachment));
+                        break;
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): MessagePayload {
+            return MessagePayload.deserialize(bytes);
+        }
+    }
+    export namespace MessagePayload {
+        export class Attachment extends pb_1.Message {
+            #one_of_decls: number[][] = [];
+            constructor(data?: any[] | {
+                mime_type: string;
+                data: Uint8Array;
+            }) {
+                super();
+                pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+                if (!Array.isArray(data) && typeof data == "object") {
+                    this.mime_type = data.mime_type;
+                    this.data = data.data;
+                }
+            }
+            get mime_type() {
+                return pb_1.Message.getField(this, 1) as string;
+            }
+            set mime_type(value: string) {
+                pb_1.Message.setField(this, 1, value);
+            }
+            get has_mime_type() {
+                return pb_1.Message.getField(this, 1) != null;
+            }
+            get data() {
+                return pb_1.Message.getField(this, 2) as Uint8Array;
+            }
+            set data(value: Uint8Array) {
+                pb_1.Message.setField(this, 2, value);
+            }
+            get has_data() {
+                return pb_1.Message.getField(this, 2) != null;
+            }
+            static fromObject(data: {
+                mime_type?: string;
+                data?: Uint8Array;
+            }): Attachment {
+                const message = new Attachment({
+                    mime_type: data.mime_type,
+                    data: data.data
+                });
+                return message;
+            }
+            toObject() {
+                const data: {
+                    mime_type?: string;
+                    data?: Uint8Array;
+                } = {};
+                if (this.mime_type != null) {
+                    data.mime_type = this.mime_type;
+                }
+                if (this.data != null) {
+                    data.data = this.data;
+                }
+                return data;
+            }
+            serialize(): Uint8Array;
+            serialize(w: pb_1.BinaryWriter): void;
+            serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+                const writer = w || new pb_1.BinaryWriter();
+                if (this.has_mime_type && this.mime_type.length)
+                    writer.writeString(1, this.mime_type);
+                if (this.has_data && this.data.length)
+                    writer.writeBytes(2, this.data);
+                if (!w)
+                    return writer.getResultBuffer();
+            }
+            static deserialize(bytes: Uint8Array | pb_1.BinaryReader): Attachment {
+                const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new Attachment();
+                while (reader.nextField()) {
+                    if (reader.isEndGroup())
+                        break;
+                    switch (reader.getFieldNumber()) {
+                        case 1:
+                            message.mime_type = reader.readString();
+                            break;
+                        case 2:
+                            message.data = reader.readBytes();
+                            break;
+                        default: reader.skipField();
+                    }
+                }
+                return message;
+            }
+            serializeBinary(): Uint8Array {
+                return this.serialize();
+            }
+            static deserializeBinary(bytes: Uint8Array): Attachment {
+                return Attachment.deserialize(bytes);
+            }
+        }
+    }
 }
