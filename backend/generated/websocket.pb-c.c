@@ -680,13 +680,13 @@ static const ProtobufCFieldDescriptor websocket__pqxdhinit__field_descriptors[5]
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "initial_ciphertext",
+    "initial_message",
     5,
     PROTOBUF_C_LABEL_REQUIRED,
-    PROTOBUF_C_TYPE_BYTES,
+    PROTOBUF_C_TYPE_MESSAGE,
     0,   /* quantifier_offset */
-    offsetof(Websocket__PQXDHInit, initial_ciphertext),
-    NULL,
+    offsetof(Websocket__PQXDHInit, initial_message),
+    &websocket__encrypted_message__descriptor,
     NULL,
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
@@ -695,7 +695,7 @@ static const ProtobufCFieldDescriptor websocket__pqxdhinit__field_descriptors[5]
 static const unsigned websocket__pqxdhinit__field_indices_by_name[] = {
   1,   /* field[1] = ephemeral_key */
   0,   /* field[0] = id_key */
-  4,   /* field[4] = initial_ciphertext */
+  4,   /* field[4] = initial_message */
   2,   /* field[2] = pqkem_ciphertext */
   3,   /* field[3] = prekey_ids */
 };

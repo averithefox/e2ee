@@ -116,11 +116,11 @@ struct  Websocket__PQXDHInit
   /*
    * First encrypted message
    */
-  ProtobufCBinaryData initial_ciphertext;
+  Websocket__EncryptedMessage *initial_message;
 };
 #define WEBSOCKET__PQXDHINIT__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&websocket__pqxdhinit__descriptor) \
-, {0,NULL}, {0,NULL}, {0,NULL}, 0,NULL, {0,NULL} }
+, {0,NULL}, {0,NULL}, {0,NULL}, 0,NULL, NULL }
 
 
 typedef enum {

@@ -390,7 +390,7 @@ export namespace websocket {
             ephemeral_key: Uint8Array;
             pqkem_ciphertext: Uint8Array;
             prekey_ids: number[];
-            initial_ciphertext: Uint8Array;
+            initial_message: EncryptedMessage;
         }) {
             super();
             pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [4], this.#one_of_decls);
@@ -399,7 +399,7 @@ export namespace websocket {
                 this.ephemeral_key = data.ephemeral_key;
                 this.pqkem_ciphertext = data.pqkem_ciphertext;
                 this.prekey_ids = data.prekey_ids;
-                this.initial_ciphertext = data.initial_ciphertext;
+                this.initial_message = data.initial_message;
             }
         }
         get id_key() {
@@ -435,13 +435,13 @@ export namespace websocket {
         set prekey_ids(value: number[]) {
             pb_1.Message.setField(this, 4, value);
         }
-        get initial_ciphertext() {
-            return pb_1.Message.getField(this, 5) as Uint8Array;
+        get initial_message() {
+            return pb_1.Message.getWrapperField(this, EncryptedMessage, 5) as EncryptedMessage;
         }
-        set initial_ciphertext(value: Uint8Array) {
-            pb_1.Message.setField(this, 5, value);
+        set initial_message(value: EncryptedMessage) {
+            pb_1.Message.setWrapperField(this, 5, value);
         }
-        get has_initial_ciphertext() {
+        get has_initial_message() {
             return pb_1.Message.getField(this, 5) != null;
         }
         static fromObject(data: {
@@ -449,14 +449,14 @@ export namespace websocket {
             ephemeral_key?: Uint8Array;
             pqkem_ciphertext?: Uint8Array;
             prekey_ids: number[];
-            initial_ciphertext?: Uint8Array;
+            initial_message?: ReturnType<typeof EncryptedMessage.prototype.toObject>;
         }): PQXDHInit {
             const message = new PQXDHInit({
                 id_key: data.id_key,
                 ephemeral_key: data.ephemeral_key,
                 pqkem_ciphertext: data.pqkem_ciphertext,
                 prekey_ids: data.prekey_ids,
-                initial_ciphertext: data.initial_ciphertext
+                initial_message: EncryptedMessage.fromObject(data.initial_message)
             });
             return message;
         }
@@ -466,7 +466,7 @@ export namespace websocket {
                 ephemeral_key?: Uint8Array;
                 pqkem_ciphertext?: Uint8Array;
                 prekey_ids: number[];
-                initial_ciphertext?: Uint8Array;
+                initial_message?: ReturnType<typeof EncryptedMessage.prototype.toObject>;
             } = {
                 prekey_ids: this.prekey_ids
             };
@@ -479,8 +479,8 @@ export namespace websocket {
             if (this.pqkem_ciphertext != null) {
                 data.pqkem_ciphertext = this.pqkem_ciphertext;
             }
-            if (this.initial_ciphertext != null) {
-                data.initial_ciphertext = this.initial_ciphertext;
+            if (this.initial_message != null) {
+                data.initial_message = this.initial_message.toObject();
             }
             return data;
         }
@@ -496,8 +496,8 @@ export namespace websocket {
                 writer.writeBytes(3, this.pqkem_ciphertext);
             if (this.prekey_ids.length)
                 writer.writeRepeatedInt64(4, this.prekey_ids);
-            if (this.has_initial_ciphertext && this.initial_ciphertext.length)
-                writer.writeBytes(5, this.initial_ciphertext);
+            if (this.has_initial_message)
+                writer.writeMessage(5, this.initial_message, () => this.initial_message.serialize(writer));
             if (!w)
                 return writer.getResultBuffer();
         }
@@ -520,7 +520,7 @@ export namespace websocket {
                         pb_1.Message.addToRepeatedField(message, 4, reader.readInt64());
                         break;
                     case 5:
-                        message.initial_ciphertext = reader.readBytes();
+                        reader.readMessage(message.initial_message, () => message.initial_message = EncryptedMessage.deserialize(reader));
                         break;
                     default: reader.skipField();
                 }

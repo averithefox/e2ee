@@ -11,6 +11,7 @@ export { randomBytes };
 const toN = (b: Uint8Array) => b.reduce((n, x, i) => n | (BigInt(x) << BigInt(i * 8)), 0n);
 const toB = (n: bigint, len = 32) => Uint8Array.from({ length: len }, (_, i) => Number((n >> BigInt(i * 8)) & 0xffn));
 
+// XEdDSA hashes (Section 5): hash1 has 0xFE×32 prefix for nonce, hash is plain SHA-512
 const hash1 = (...d: Uint8Array[]) => mod(toN(sha512(concatBytes(new Uint8Array(32).fill(0xff), ...d))), q);
 const xhash = (...d: Uint8Array[]) => mod(toN(sha512(concatBytes(...d))), q);
 
@@ -41,8 +42,8 @@ const calcKeyPair = (k: bigint) => {
   return x & 1n ? { A: E.negate(), a: mod(-kq, q) } : { A: E, a: kq };
 };
 
-/** XEdDSA Sign: k=X25519 private key, M=message, Z=64 random bytes */
-export function xeddsaSign(k: Uint8Array, M: Uint8Array, Z: Uint8Array): Uint8Array {
+// XEdDSA Sign: k=X25519 private key, M=message, Z=64 random bytes
+export function xeddsa_sign(k: Uint8Array, M: Uint8Array, Z: Uint8Array): Uint8Array {
   const { A, a } = calcKeyPair(toN(clamp(k)));
   const r = hash1(toB(a), M, Z);
   const R = Point.BASE.multiply(r);
@@ -50,8 +51,8 @@ export function xeddsaSign(k: Uint8Array, M: Uint8Array, Z: Uint8Array): Uint8Ar
   return concatBytes(R.toBytes(), toB(mod(r + h * a, q)));
 }
 
-/** XEdDSA Verify: u=X25519 public key, M=message, sig=64-byte signature */
-export function xeddsaVerify(u: Uint8Array, M: Uint8Array, sig: Uint8Array): boolean {
+// XEdDSA Verify: u=X25519 public key, M=message, sig=64-byte signature
+export function xeddsa_verify(u: Uint8Array, M: Uint8Array, sig: Uint8Array): boolean {
   if (sig.length !== 64 || u.length !== 32) return false;
   const [R_b, s_b] = [sig.slice(0, 32), sig.slice(32)];
   const [uN, s] = [toN(u), toN(s_b)];
