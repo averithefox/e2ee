@@ -2,7 +2,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun --port 5173 --hot src/index.html",
-    "build": "bun build src/index.html --outdir=../build/public --target=browser --minify --env=inline"
+    "build": "bun scripts/build.ts"
   },
   "dependencies": {
     "@noble/curves": "^2.0.1",

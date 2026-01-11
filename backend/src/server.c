@@ -34,14 +34,22 @@ void handle_server_event(struct mg_connection *c, int ev, void *ev_data) {
     return;
   }
 
-  struct mg_str caps[2];
-  if (mg_strcmp(hm->uri, mg_str("/api/identity")) == 0) {
-    handle_identity_request(c, hm);
-  } else if (mg_strcmp(hm->uri, mg_str("/api/ws")) == 0) {
-    handle_ws_upgrade_request(c, hm);
-  } else if (mg_match(hm->uri, mg_str("/api/keys/*/bundle"), caps)) {
-    handle_prekey_bundle_request(c, hm, &caps[0]);
+  if (mg_match(hm->uri, mg_str("/api/#"), NULL)) {
+    struct mg_str caps[2];
+    if (mg_strcmp(hm->uri, mg_str("/api/identity")) == 0) {
+      handle_identity_request(c, hm);
+    } else if (mg_strcmp(hm->uri, mg_str("/api/ws")) == 0) {
+      handle_ws_upgrade_request(c, hm);
+    } else if (mg_match(hm->uri, mg_str("/api/keys/*/bundle"), caps)) {
+      handle_prekey_bundle_request(c, hm, &caps[0]);
+    } else {
+      mg_http_reply(c, 404, "", "");
+    }
   } else {
-    mg_http_reply(c, 404, "", "");
+    struct mg_http_serve_opts opts = {
+        .root_dir = "./public",
+        .page404 = "./public/index.html",
+    };
+    mg_http_serve_dir(c, hm, &opts);
   }
 }
