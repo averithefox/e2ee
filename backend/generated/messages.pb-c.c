@@ -706,11 +706,23 @@ const ProtobufCMessageDescriptor messages__message_payload__attachment__descript
   (ProtobufCMessageInit) messages__message_payload__attachment__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor messages__message_payload__field_descriptors[2] =
+static const ProtobufCFieldDescriptor messages__message_payload__field_descriptors[3] =
 {
   {
-    "text",
+    "uuid",
     1,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_BYTES,
+    0,   /* quantifier_offset */
+    offsetof(Messages__MessagePayload, uuid),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "text",
+    2,
     PROTOBUF_C_LABEL_OPTIONAL,
     PROTOBUF_C_TYPE_STRING,
     0,   /* quantifier_offset */
@@ -722,7 +734,7 @@ static const ProtobufCFieldDescriptor messages__message_payload__field_descripto
   },
   {
     "attachments",
-    2,
+    3,
     PROTOBUF_C_LABEL_REPEATED,
     PROTOBUF_C_TYPE_MESSAGE,
     offsetof(Messages__MessagePayload, n_attachments),
@@ -734,13 +746,14 @@ static const ProtobufCFieldDescriptor messages__message_payload__field_descripto
   },
 };
 static const unsigned messages__message_payload__field_indices_by_name[] = {
-  1,   /* field[1] = attachments */
-  0,   /* field[0] = text */
+  2,   /* field[2] = attachments */
+  1,   /* field[1] = text */
+  0,   /* field[0] = uuid */
 };
 static const ProtobufCIntRange messages__message_payload__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 2 }
+  { 0, 3 }
 };
 const ProtobufCMessageDescriptor messages__message_payload__descriptor =
 {
@@ -750,7 +763,7 @@ const ProtobufCMessageDescriptor messages__message_payload__descriptor =
   "Messages__MessagePayload",
   "messages",
   sizeof(Messages__MessagePayload),
-  2,
+  3,
   messages__message_payload__field_descriptors,
   messages__message_payload__field_indices_by_name,
   1,  messages__message_payload__number_ranges,

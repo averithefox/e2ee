@@ -1,9 +1,13 @@
-import NewConversationModal from 'components/new-conversation-modal';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { messages as messages_proto } from 'generated/messages';
 import { websocket } from 'generated/websocket';
+import { Loader2, OctagonX, Plus, Send, SidebarClose, SidebarOpen } from 'lucide-react';
+import { err, ok, type Result } from 'neverthrow';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useLocation } from 'wouter';
+import NewConversationModal from '~/components/new-conversation-modal';
+import { Button } from '~/components/ui/button';
+import { Input } from '~/components/ui/input';
 import { API_BASE_URL, fetchKeyBundle } from '~/lib/api';
 import { randomBytes, xeddsa_sign } from '~/lib/crypto';
 import { db } from '~/lib/db';
@@ -13,9 +17,10 @@ import { cn, eq } from '~/lib/utils';
 export function HomeView() {
   const [, navigate] = useLocation();
 
-  const wsRef = useRef<(WebSocket & { msgId: number }) | null>(null);
+  const wsRef = useRef<(WebSocket & { msgId: number; connectAttempts: number }) | null>(null);
 
-  const [loadingStage, setLoadingStage] = useState<'identity' | 'ws.connect' | 'ws.auth' | null>('identity');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [status, setStatus] = useState<Result<string, string> | null>();
   const [identity, setIdentity] = useState<{ handle: string; sigKey: Uint8Array }>(null!);
   const [newConvoOpen, setNewConvoOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
@@ -43,29 +48,18 @@ export function HomeView() {
   const messages = useLiveQuery(async () => {
     if (!selectedContact) return [];
     const messages = await db.messages.where({ peer: selectedContact }).toArray();
-    const decrypted = await Promise.all(
+    return Promise.all(
       messages.map(async ({ id, sender, ciphertext, nonce }) => {
         const plaintext = await decryptLocal(ciphertext, nonce);
         const payload = messages_proto.MessagePayload.deserialize(plaintext);
         return {
-          id,
+          id: payload.uuid,
           sender,
           text: payload.text ?? ''
         };
       })
     );
-    return decrypted.sort((a, b) => a.id - b.id);
   }, [selectedContact]);
-
-  const statusTranslation = useMemo(
-    () =>
-      ({
-        identity: 'Loading identity...',
-        'ws.connect': 'Connecting to WebSocket...',
-        'ws.auth': 'Authenticating...'
-      }) satisfies Record<NonNullable<typeof loadingStage>, string>,
-    []
-  );
 
   async function send(
     ws: WebSocket & { msgId: number },
@@ -116,6 +110,7 @@ export function HomeView() {
     input.value = '';
 
     const payload = new messages_proto.MessagePayload({
+      uuid: randomBytes(16),
       text: content,
       attachments: []
     });
@@ -149,21 +144,24 @@ export function HomeView() {
 
   useEffect(() => {
     (async () => {
+      setStatus(ok('loading'));
+
       const identity = await db.identity.limit(1).first();
       if (!identity) {
         return navigate('/register');
       }
       setIdentity({ handle: identity.handle, sigKey: identity.pub });
 
-      setLoadingStage('ws.connect');
+      setStatus(ok('connecting'));
 
       const ws = new WebSocket(`${API_BASE_URL}/api/ws`) as NonNullable<typeof wsRef.current>;
       ws.msgId = 0;
+      ws.connectAttempts = 0;
       ws.binaryType = 'arraybuffer';
       wsRef.current = ws;
 
       ws.onopen = () => {
-        setLoadingStage('ws.auth');
+        setStatus(ok('authenticating'));
       };
 
       ws.onmessage = ev => {
@@ -176,13 +174,12 @@ export function HomeView() {
                 handle: identity.handle,
                 signature: xeddsa_sign(identity.priv, msg.challenge.nonce, randomBytes(64))
               })
-            }).then(err => {
-              if (err) {
-                // TODO: handle error
-                setLoadingStage(null);
+            }).then(error => {
+              if (error) {
+                setStatus(err(`server rejected authentication: ${websocket.Ack.Error[error]}`));
                 return;
               }
-              setLoadingStage(null);
+              setStatus(null);
             });
             break;
           }
@@ -197,11 +194,25 @@ export function HomeView() {
     })();
   }, []);
 
-  if (loadingStage) {
+  const contactsList = useMemo(() => {
+    const list = [...(contacts ?? [])];
+    if (selectedContact && !contacts?.some(c => c.handle === selectedContact)) {
+      list.push({ handle: selectedContact, lastMessage: null });
+    }
+    return list;
+  }, [contacts, selectedContact]);
+
+  if (status !== null) {
+    if (!status) return null;
     return (
-      <main className="min-h-screen bg-[#F2F6FC] text-[#0C0C0C] dark:bg-[#0C0C0C] dark:text-[#F2F6FC]">
-        <div className="flex min-h-screen items-center justify-center">
-          <p className="text-sm">{statusTranslation[loadingStage]}</p>
+      <main className="bg-background text-foreground flex min-h-screen items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          {status.isErr() ? (
+            <OctagonX className="text-destructive size-6" />
+          ) : (
+            <Loader2 className="size-6 animate-spin" />
+          )}
+          <p className="text-muted-foreground text-sm capitalize">{status.isErr() ? status.error : status.value}</p>
         </div>
       </main>
     );
@@ -214,140 +225,127 @@ export function HomeView() {
         onClose={() => setNewConvoOpen(false)}
         onStart={handleStartConversation}
       />
-      <main className="flex h-screen bg-[#F2F6FC] text-[#0C0C0C] dark:bg-[#0C0C0C] dark:text-[#F2F6FC]">
+      <main className="bg-background text-foreground flex h-screen">
         <aside
-          className={`flex shrink-0 flex-col border-r border-[#0C0C0C] transition-all duration-200 dark:border-[#F2F6FC] ${
-            true ? 'w-72' : 'w-0 overflow-hidden border-r-0'
-          }`}
+          className={cn(
+            'bg-card border-border flex shrink-0 flex-col border-r transition-all duration-200',
+            sidebarOpen ? 'w-72' : 'w-0 overflow-hidden border-r-0'
+          )}
         >
-          <div className="flex shrink-0 items-center justify-between border-b border-[#0C0C0C] px-4 py-3 dark:border-[#F2F6FC]">
+          <div className="border-border flex h-14 shrink-0 items-center justify-between border-b px-4">
             <span className="text-sm font-semibold">Contacts</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setNewConvoOpen(true)}
-                className="flex h-6 w-6 items-center justify-center border border-[#0C0C0C] text-sm hover:bg-[#0C0C0C] hover:text-[#F2F6FC] dark:border-[#F2F6FC] dark:hover:bg-[#F2F6FC] dark:hover:text-[#0C0C0C]"
-                aria-label="New conversation"
-                title="New conversation"
-              >
-                +
-              </button>
-            </div>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              onClick={() => setNewConvoOpen(true)}
+              aria-label="New conversation"
+              title="New conversation"
+            >
+              <Plus className="size-4" />
+            </Button>
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            {[
-              ...(contacts ?? []),
-              ...(selectedContact && !contacts?.some(c => c.handle === selectedContact)
-                ? [{ handle: selectedContact, lastMessage: null }]
-                : [])
-            ].map(contact => (
-              <button
-                key={contact.handle}
-                onClick={() => setSelectedContact(contact.handle)}
-                className={cn(
-                  'flex w-full items-center gap-3 border-b border-[#0C0C0C] px-4 py-3 text-left transition-colors dark:border-[#F2F6FC]',
-                  contact.handle === selectedContact
-                    ? 'bg-[#0C0C0C] text-[#F2F6FC] dark:bg-[#F2F6FC] dark:text-[#0C0C0C]'
-                    : 'hover:bg-[#0C0C0C]/5 dark:hover:bg-[#F2F6FC]/5'
-                )}
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-sm font-medium">{contact.handle}</span>
-                    {/* {contact.lastMessageTime && (
-                      <span
-                        className={`shrink-0 text-[10px] ${
-                          selectedContact === contact.handle
-                            ? 'text-zinc-400 dark:text-zinc-500'
-                            : 'text-zinc-500 dark:text-zinc-400'
-                        }`}
-                      >
-                        {formatRelativeTime(contact.lastMessageTime)}
-                      </span>
-                    )} */}
-                  </div>
-                  {contact.lastMessage && (
-                    <p
-                      className={`truncate text-xs ${
-                        selectedContact === contact.handle
-                          ? 'text-zinc-400 dark:text-zinc-500'
-                          : 'text-zinc-500 dark:text-zinc-400'
-                      }`}
-                    >
-                      {contact.lastMessage.sender === identity.handle ? 'You: ' : `${contact.lastMessage.sender}: `}
-                      {contact.lastMessage.text}
-                    </p>
+            {contactsList.length === 0 ? (
+              <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-center text-sm">
+                No conversations yet.
+                <br />
+                Start one with the + button.
+              </div>
+            ) : (
+              contactsList.map(contact => (
+                <button
+                  key={contact.handle}
+                  onClick={() => setSelectedContact(contact.handle)}
+                  className={cn(
+                    'border-border flex w-full items-center gap-3 border-b px-4 py-3 text-left transition-colors',
+                    contact.handle === selectedContact ? 'bg-accent text-accent-foreground' : 'hover:bg-muted/50'
                   )}
-                </div>
-              </button>
-            ))}
+                >
+                  <div className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium">{contact.handle}</span>
+                    <p className="text-muted-foreground truncate text-xs">{contact.lastMessage?.text}</p>
+                  </div>
+                </button>
+              ))
+            )}
           </div>
 
-          {/* <div className="shrink-0 border-t border-[#0C0C0C] px-4 py-3 dark:border-[#F2F6FC]">
-            <div className="flex items-center gap-3">
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium">{identity.handle}</div>
-              </div>
-            </div>
-          </div> */}
+          <div className="border-border flex shrink-0 items-center gap-3 border-t px-4 py-3">
+            <span className="text-muted-foreground truncate text-sm">{identity?.handle}</span>
+          </div>
         </aside>
 
-        {/* Main chat area */}
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex shrink-0 items-center justify-between border-b border-[#0C0C0C] px-4 py-3 dark:border-[#F2F6FC]">
-            <div className="flex items-center gap-3">
-              {/* <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="flex h-8 w-8 items-center justify-center border border-[#0C0C0C] text-sm hover:bg-[#0C0C0C] hover:text-[#F2F6FC] dark:border-[#F2F6FC] dark:hover:bg-[#F2F6FC] dark:hover:text-[#0C0C0C]"
-                aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
-              >
-                {true ? '✕' : '☰'}
-              </button> */}
-              <div className="text-sm font-semibold">{selectedContact}</div>
-            </div>
+          <header className="border-border flex h-14 shrink-0 items-center gap-3 border-b px-4">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+            >
+              {sidebarOpen ? <SidebarClose className="size-4" /> : <SidebarOpen className="size-4" />}
+            </Button>
+            {selectedContact ? (
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold">{selectedContact}</span>
+              </div>
+            ) : (
+              <span className="text-muted-foreground text-sm">Select a conversation</span>
+            )}
           </header>
 
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-4 py-4">
-            <div className="mx-auto max-w-2xl space-y-3">
-              {messages?.map(msg => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.sender === identity.handle ? 'justify-end' : 'justify-start'}`}
-                >
+          <div className="flex-1 overflow-y-auto p-4">
+            {!selectedContact ? (
+              <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
+                Select a contact to start chatting
+              </div>
+            ) : messages?.length === 0 ? (
+              <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
+                No messages yet. Say hello!
+              </div>
+            ) : (
+              <div className="mx-auto max-w-2xl space-y-3">
+                {messages?.map(msg => (
                   <div
-                    className={`max-w-[75%] border px-3 py-2 ${
-                      msg.sender === identity.handle
-                        ? 'border-[#0C0C0C] bg-[#0C0C0C] text-[#F2F6FC] dark:border-[#F2F6FC] dark:bg-[#F2F6FC] dark:text-[#0C0C0C]'
-                        : 'border-[#0C0C0C] bg-transparent dark:border-[#F2F6FC]'
-                    }`}
+                    key={msg.id.toString()}
+                    className={cn('flex', msg.sender === identity.handle ? 'justify-end' : 'justify-start')}
                   >
-                    <div className="text-sm">{msg.text}</div>
+                    <div
+                      className={cn(
+                        'max-w-[75%] rounded-lg px-3 py-2 text-sm',
+                        msg.sender === identity.handle
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-foreground'
+                      )}
+                    >
+                      {msg.text}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Input area */}
-          <div className="shrink-0 border-t border-[#0C0C0C] px-4 py-3 dark:border-[#F2F6FC]">
-            <div className="mx-auto max-w-2xl space-y-2">
-              {/* Input form */}
-              <form onSubmit={handleSend} className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Type a message…"
-                  className="flex-1 border border-[#0C0C0C] bg-transparent px-3 py-2 text-sm text-[#0C0C0C] placeholder:text-zinc-500 focus:ring-2 focus:ring-[#0C0C0C] focus:ring-offset-2 focus:ring-offset-[#F2F6FC] focus:outline-none dark:border-[#F2F6FC] dark:text-[#F2F6FC] dark:placeholder:text-zinc-400 dark:focus:ring-[#F2F6FC] dark:focus:ring-offset-[#0C0C0C]"
-                />
-                <button
-                  type="submit"
-                  disabled={!selectedContact}
-                  className="border border-[#0C0C0C] bg-[#0C0C0C] px-4 py-2 text-sm font-medium text-[#F2F6FC] hover:bg-transparent hover:text-[#0C0C0C] focus:ring-2 focus:ring-[#0C0C0C] focus:ring-offset-2 focus:ring-offset-[#F2F6FC] focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#F2F6FC] dark:bg-[#F2F6FC] dark:text-[#0C0C0C] dark:hover:bg-transparent dark:hover:text-[#F2F6FC] dark:focus:ring-[#F2F6FC] dark:focus:ring-offset-[#0C0C0C]"
-                >
-                  Send
-                </button>
-              </form>
-            </div>
+          <div className="shrink-0 p-2">
+            <form onSubmit={handleSend} className="relative">
+              <Input
+                type="text"
+                placeholder={selectedContact ? `Message ${selectedContact}` : 'Select a contact first'}
+                disabled={!selectedContact}
+                className="bg-background dark:bg-background h-11 pr-11"
+              />
+              <Button
+                variant="outline"
+                type="submit"
+                size="icon-sm"
+                disabled={!selectedContact}
+                className="absolute top-1/2 right-1.5 -translate-y-1/2"
+              >
+                <Send className="size-4" />
+                <span className="sr-only">Send</span>
+              </Button>
+            </form>
           </div>
         </div>
       </main>

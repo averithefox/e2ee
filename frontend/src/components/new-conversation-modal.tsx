@@ -1,0 +1,192 @@
+import type { messages } from 'generated/messages';
+import { X } from 'lucide-react';
+import type { Result } from 'neverthrow';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { fetchKeyBundle } from '~/lib/api';
+import { db } from '~/lib/db';
+import { verifyKeyBundle } from '~/lib/protocol';
+import { cn, eq, formatFingerprint } from '~/lib/utils';
+import { Button } from './ui/button';
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+
+export function NewConversationModal({
+  isOpen,
+  onClose,
+  onStart
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onStart: (handle: string, keyBundle: messages.PQXDHKeyBundle) => void;
+}) {
+  const [recipientHandle, setRecipientHandle] = useState('');
+  const [keyBundle, setKeyBundle] = useState<messages.PQXDHKeyBundle | null>(null);
+  const [storedIdKey, setStoredIdKey] = useState<Uint8Array | null>(null);
+  const [lookupStatus, setLookupStatus] = useState<'idle' | 'loading' | 'found' | 'not_found' | 'invalid_signature'>(
+    'idle'
+  );
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const keyBundleCache = useRef(new Map<string, Result<messages.PQXDHKeyBundle, number>>());
+
+  function resetKeyState() {
+    setKeyBundle(null);
+    setStoredIdKey(null);
+  }
+
+  useEffect(() => {
+    if (isOpen) {
+      setRecipientHandle('');
+      resetKeyState();
+      setLookupStatus('idle');
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handle = recipientHandle.trim();
+    if (!handle) {
+      resetKeyState();
+      setLookupStatus('idle');
+      return;
+    }
+
+    const controller = new AbortController();
+    setLookupStatus('loading');
+
+    (async () => {
+      try {
+        let res = keyBundleCache.current.get(handle);
+        if (!res) {
+          res = await fetchKeyBundle(handle, { signal: controller.signal });
+          keyBundleCache.current.set(handle, res);
+        }
+
+        if (res.isErr()) {
+          resetKeyState();
+          setLookupStatus(res.error === 404 ? 'not_found' : 'idle');
+          return;
+        }
+
+        if (!verifyKeyBundle(res.value)) {
+          resetKeyState();
+          setLookupStatus('invalid_signature');
+          return;
+        }
+
+        const storedIdKey = await db.identity_keys.get(handle);
+        setStoredIdKey(storedIdKey?.pub ?? null);
+
+        setKeyBundle(res.value);
+        setLookupStatus('found');
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          resetKeyState();
+          setLookupStatus('idle');
+        }
+      }
+    })();
+
+    return () => controller.abort();
+  }, [isOpen, recipientHandle]);
+
+  if (!isOpen) return null;
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    const h = recipientHandle.trim();
+    if (h && keyBundle && lookupStatus === 'found') {
+      await db.identity_keys.put({ for: h, pub: keyBundle.id_key }, h);
+      onStart(h, keyBundle);
+      keyBundleCache.current.delete(h);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-[#0C0C0C]/50 dark:bg-[#F2F6FC]/10" onClick={onClose} />
+      <Card className="relative w-full max-w-sm">
+        <CardHeader>
+          <CardTitle>New Conversation</CardTitle>
+          <CardDescription>Enter recipient handle</CardDescription>
+          <CardAction>
+            <Button type="button" variant="ghost" onClick={onClose}>
+              <X className="size-4" />
+            </Button>
+          </CardAction>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit}>
+            <div className="flex flex-col gap-2">
+              <div className="grid gap-2">
+                <Label htmlFor="handle">Handle</Label>
+                <Input
+                  ref={inputRef}
+                  type="text"
+                  id="handle"
+                  value={recipientHandle}
+                  onChange={e => setRecipientHandle(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div>
+                {
+                  {
+                    loading: <div className="text-xs text-zinc-500 dark:text-zinc-400">Looking up identity…</div>,
+                    not_found: <div className="text-xs text-red-600 dark:text-red-400">User not found</div>,
+                    invalid_signature: <div className="text-xs text-red-600 dark:text-red-400">Invalid signature</div>,
+                    idle: null,
+                    found: keyBundle && (
+                      <div className="space-y-1">
+                        <div className="text-[10px] font-medium tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
+                          Identity Key Fingerprint
+                        </div>
+                        <p
+                          className={cn(
+                            'font-mono text-xs leading-relaxed break-all',
+                            !storedIdKey || eq(keyBundle.id_key, storedIdKey)
+                              ? 'text-indigo-600 dark:text-indigo-400'
+                              : 'text-red-600 dark:text-red-400'
+                          )}
+                        >
+                          {formatFingerprint(keyBundle.id_key)}
+                        </p>
+                      </div>
+                    )
+                  }[lookupStatus]
+                }
+              </div>
+
+              {keyBundle && storedIdKey && !eq(keyBundle.id_key, storedIdKey) && (
+                <div className="w-full space-y-2 bg-red-600 p-2 text-sm text-white dark:bg-red-400">
+                  <p>
+                    The identity key provided by the server does not match {recipientHandle}'
+                    {recipientHandle.endsWith('s') ? '' : 's'} last known identity key.
+                  </p>
+                  <p className="font-mono text-xs leading-relaxed break-all">{formatFingerprint(storedIdKey)}</p>
+                </div>
+              )}
+
+              <Button type="submit" disabled={!recipientHandle.trim() || lookupStatus !== 'found'}>
+                Start
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export default NewConversationModal;

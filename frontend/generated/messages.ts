@@ -651,38 +651,51 @@ export namespace messages {
     export class MessagePayload extends pb_1.Message {
         #one_of_decls: number[][] = [];
         constructor(data?: any[] | {
+            uuid: Uint8Array;
             text?: string;
             attachments: MessagePayload.Attachment[];
         }) {
             super();
-            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [2], this.#one_of_decls);
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [3], this.#one_of_decls);
             if (!Array.isArray(data) && typeof data == "object") {
+                this.uuid = data.uuid;
                 if ("text" in data && data.text != undefined) {
                     this.text = data.text;
                 }
                 this.attachments = data.attachments;
             }
         }
-        get text() {
-            return pb_1.Message.getFieldWithDefault(this, 1, "") as string;
+        get uuid() {
+            return pb_1.Message.getField(this, 1) as Uint8Array;
         }
-        set text(value: string) {
+        set uuid(value: Uint8Array) {
             pb_1.Message.setField(this, 1, value);
         }
-        get has_text() {
+        get has_uuid() {
             return pb_1.Message.getField(this, 1) != null;
         }
+        get text() {
+            return pb_1.Message.getFieldWithDefault(this, 2, "") as string;
+        }
+        set text(value: string) {
+            pb_1.Message.setField(this, 2, value);
+        }
+        get has_text() {
+            return pb_1.Message.getField(this, 2) != null;
+        }
         get attachments() {
-            return pb_1.Message.getRepeatedWrapperField(this, MessagePayload.Attachment, 2) as MessagePayload.Attachment[];
+            return pb_1.Message.getRepeatedWrapperField(this, MessagePayload.Attachment, 3) as MessagePayload.Attachment[];
         }
         set attachments(value: MessagePayload.Attachment[]) {
-            pb_1.Message.setRepeatedWrapperField(this, 2, value);
+            pb_1.Message.setRepeatedWrapperField(this, 3, value);
         }
         static fromObject(data: {
+            uuid?: Uint8Array;
             text?: string;
             attachments?: ReturnType<typeof MessagePayload.Attachment.prototype.toObject>[];
         }): MessagePayload {
             const message = new MessagePayload({
+                uuid: data.uuid,
                 attachments: data.attachments.map(item => MessagePayload.Attachment.fromObject(item))
             });
             if (data.text != null) {
@@ -692,9 +705,13 @@ export namespace messages {
         }
         toObject() {
             const data: {
+                uuid?: Uint8Array;
                 text?: string;
                 attachments?: ReturnType<typeof MessagePayload.Attachment.prototype.toObject>[];
             } = {};
+            if (this.uuid != null) {
+                data.uuid = this.uuid;
+            }
             if (this.text != null) {
                 data.text = this.text;
             }
@@ -707,10 +724,12 @@ export namespace messages {
         serialize(w: pb_1.BinaryWriter): void;
         serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
             const writer = w || new pb_1.BinaryWriter();
+            if (this.has_uuid && this.uuid.length)
+                writer.writeBytes(1, this.uuid);
             if (this.has_text && this.text.length)
-                writer.writeString(1, this.text);
+                writer.writeString(2, this.text);
             if (this.attachments.length)
-                writer.writeRepeatedMessage(2, this.attachments, (item: MessagePayload.Attachment) => item.serialize(writer));
+                writer.writeRepeatedMessage(3, this.attachments, (item: MessagePayload.Attachment) => item.serialize(writer));
             if (!w)
                 return writer.getResultBuffer();
         }
@@ -721,10 +740,13 @@ export namespace messages {
                     break;
                 switch (reader.getFieldNumber()) {
                     case 1:
-                        message.text = reader.readString();
+                        message.uuid = reader.readBytes();
                         break;
                     case 2:
-                        reader.readMessage(message.attachments, () => pb_1.Message.addToRepeatedWrapperField(message, 2, MessagePayload.Attachment.deserialize(reader), MessagePayload.Attachment));
+                        message.text = reader.readString();
+                        break;
+                    case 3:
+                        reader.readMessage(message.attachments, () => pb_1.Message.addToRepeatedWrapperField(message, 3, MessagePayload.Attachment.deserialize(reader), MessagePayload.Attachment));
                         break;
                     default: reader.skipField();
                 }

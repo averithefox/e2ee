@@ -46,6 +46,7 @@ message MessagePayload {
     required bytes data = 2;
   }
 
-  optional string text = 1;
-  repeated Attachment attachments = 2;
+  required bytes uuid = 1;
+  optional string text = 2;
+  repeated Attachment attachments = 3;
 }

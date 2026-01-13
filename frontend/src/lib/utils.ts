@@ -38,3 +38,8 @@ export function formatFingerprint(key: Uint8Array): string {
   // Group into 4-char chunks separated by spaces
   return hex.match(/.{1,4}/g)?.join(' ') ?? hex;
 }
+
+export async function _sleep(ms: number) {
+  if (process.env.NODE_ENV !== 'development') return;
+  return new Promise(resolve => setTimeout(resolve, ms));
+}

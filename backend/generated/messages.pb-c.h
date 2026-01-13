@@ -114,13 +114,14 @@ struct  Messages__MessagePayload__Attachment
 struct  Messages__MessagePayload
 {
   ProtobufCMessage base;
+  ProtobufCBinaryData uuid;
   char *text;
   size_t n_attachments;
   Messages__MessagePayload__Attachment **attachments;
 };
 #define MESSAGES__MESSAGE_PAYLOAD__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&messages__message_payload__descriptor) \
-, NULL, 0,NULL }
+, {0,NULL}, NULL, 0,NULL }
 
 
 /* Messages__Prekey methods */
