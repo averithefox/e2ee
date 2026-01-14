@@ -10,7 +10,7 @@ char *b64_decode(const char *b64, ssize_t b64_len, size_t *out_len) {
   if (!ctx) return NULL;
 
   int len, total_len = 0;
-  size_t input_len = b64_len < 0 ? strlen(b64) : b64_len;
+  size_t input_len = b64_len < 0 ? strlen(b64) : (size_t)b64_len;
   char *output = malloc(input_len);
   if (!output) {
     fprintf(stderr, "[%s:%d] out of memory\n", __func__, __LINE__);
