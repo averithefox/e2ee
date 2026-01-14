@@ -706,7 +706,7 @@ const ProtobufCMessageDescriptor messages__message_payload__attachment__descript
   (ProtobufCMessageInit) messages__message_payload__attachment__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor messages__message_payload__field_descriptors[5] =
+static const ProtobufCFieldDescriptor messages__message_payload__field_descriptors[8] =
 {
   {
     "uuid",
@@ -768,9 +768,48 @@ static const ProtobufCFieldDescriptor messages__message_payload__field_descripto
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "edit_target",
+    6,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_BYTES,
+    offsetof(Messages__MessagePayload, sync_case),
+    offsetof(Messages__MessagePayload, edit_target),
+    NULL,
+    NULL,
+    PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "delete_target",
+    7,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_BYTES,
+    offsetof(Messages__MessagePayload, sync_case),
+    offsetof(Messages__MessagePayload, delete_target),
+    NULL,
+    NULL,
+    PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "edited_at",
+    8,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_INT64,
+    offsetof(Messages__MessagePayload, has_edited_at),
+    offsetof(Messages__MessagePayload, edited_at),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned messages__message_payload__field_indices_by_name[] = {
   2,   /* field[2] = attachments */
+  6,   /* field[6] = delete_target */
+  5,   /* field[5] = edit_target */
+  7,   /* field[7] = edited_at */
   3,   /* field[3] = reply_to */
   1,   /* field[1] = text */
   4,   /* field[4] = timestamp */
@@ -779,7 +818,7 @@ static const unsigned messages__message_payload__field_indices_by_name[] = {
 static const ProtobufCIntRange messages__message_payload__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 5 }
+  { 0, 8 }
 };
 const ProtobufCMessageDescriptor messages__message_payload__descriptor =
 {
@@ -789,7 +828,7 @@ const ProtobufCMessageDescriptor messages__message_payload__descriptor =
   "Messages__MessagePayload",
   "messages",
   sizeof(Messages__MessagePayload),
-  5,
+  8,
   messages__message_payload__field_descriptors,
   messages__message_payload__field_indices_by_name,
   1,  messages__message_payload__number_ranges,

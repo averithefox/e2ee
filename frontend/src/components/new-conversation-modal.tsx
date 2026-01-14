@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { fetchKeyBundle } from '~/lib/api';
 import { db } from '~/lib/db';
 import { verifyKeyBundle } from '~/lib/protocol';
-import { cn, eq, formatFingerprint } from '~/lib/utils';
+import { cn, eq, formatFingerprint, validateHandle } from '~/lib/utils';
 import { Button } from './ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
@@ -23,9 +23,10 @@ export function NewConversationModal({
   const [recipientHandle, setRecipientHandle] = useState('');
   const [keyBundle, setKeyBundle] = useState<messages.PQXDHKeyBundle | null>(null);
   const [storedIdKey, setStoredIdKey] = useState<Uint8Array | null>(null);
-  const [lookupStatus, setLookupStatus] = useState<'idle' | 'loading' | 'found' | 'not_found' | 'invalid_signature'>(
+  const [lookupStatus, setLookupStatus] = useState<'idle' | 'loading' | 'found' | 'not_found' | 'invalid_signature' | 'invalid_handle'>(
     'idle'
   );
+  const [handleError, setHandleError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const keyBundleCache = useRef(new Map<string, Result<messages.PQXDHKeyBundle, number>>());
@@ -59,8 +60,18 @@ export function NewConversationModal({
     if (!handle) {
       resetKeyState();
       setLookupStatus('idle');
+      setHandleError(null);
       return;
     }
+
+    const validationError = validateHandle(handle);
+    if (validationError) {
+      resetKeyState();
+      setLookupStatus('invalid_handle');
+      setHandleError(validationError);
+      return;
+    }
+    setHandleError(null);
 
     const controller = new AbortController();
     setLookupStatus('loading');
@@ -146,6 +157,7 @@ export function NewConversationModal({
                     loading: <div className="text-xs text-zinc-500 dark:text-zinc-400">Looking up identity…</div>,
                     not_found: <div className="text-xs text-red-600 dark:text-red-400">User not found</div>,
                     invalid_signature: <div className="text-xs text-red-600 dark:text-red-400">Invalid signature</div>,
+                    invalid_handle: <div className="text-xs text-red-600 dark:text-red-400">{handleError}</div>,
                     idle: null,
                     found: keyBundle && (
                       <div className="space-y-1">

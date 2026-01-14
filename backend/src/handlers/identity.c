@@ -23,6 +23,33 @@
 
 #define BUF(STRUCT) (STRUCT).data, (STRUCT).len
 
+#define HANDLE_MIN_LENGTH 3
+#define HANDLE_MAX_LENGTH 32
+
+static int validate_handle(const char *handle) {
+  if (!handle) return 0;
+
+  size_t len = strlen(handle);
+  if (len < HANDLE_MIN_LENGTH || len > HANDLE_MAX_LENGTH) return 0;
+
+  // Must start with a lowercase letter
+  if (!islower((unsigned char)handle[0])) return 0;
+
+  for (size_t i = 0; i < len; ++i) {
+    char c = handle[i];
+    // Must be lowercase letter, digit, or underscore
+    if (!islower((unsigned char)c) && !isdigit((unsigned char)c) && c != '_')
+      return 0;
+    // No consecutive underscores
+    if (c == '_' && i > 0 && handle[i - 1] == '_') return 0;
+  }
+
+  // Cannot end with underscore
+  if (handle[len - 1] == '_') return 0;
+
+  return 1;
+}
+
 static int verify_xeddsa_signature(const Messages__SignedPrekey *pb,
                                    const void *pk) {
   if (!pb || pb->sig.len != XEDDSA_SIGNATURE_LENGTH || !pk) return 0;
@@ -38,6 +65,12 @@ static void handle_identity_POST_request(struct mg_connection *c,
   pb = messages__identity__unpack(NULL, hm->body.len, (uint8_t *)hm->body.buf);
   if (!pb) {
     fprintf(stderr, "[%s:%d] invalid message\n", __func__, __LINE__);
+    ERR(400);
+  }
+
+  if (!validate_handle(pb->handle)) {
+    fprintf(stderr, "[%s:%d] invalid handle: %s\n", __func__, __LINE__,
+            pb->handle);
     ERR(400);
   }
 

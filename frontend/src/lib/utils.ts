@@ -43,3 +43,18 @@ export async function _sleep(ms: number) {
   if (process.env.NODE_ENV !== 'development') return;
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+const HANDLE_MIN_LENGTH = 3;
+const HANDLE_MAX_LENGTH = 32;
+const HANDLE_REGEX = /^[a-z][a-z0-9_]*$/;
+
+export function validateHandle(handle: string): string | null {
+  if (!handle) return 'Handle is required';
+  if (handle.length < HANDLE_MIN_LENGTH) return `Handle must be at least ${HANDLE_MIN_LENGTH} characters`;
+  if (handle.length > HANDLE_MAX_LENGTH) return `Handle must be at most ${HANDLE_MAX_LENGTH} characters`;
+  if (handle !== handle.toLowerCase()) return 'Handle must be lowercase';
+  if (!HANDLE_REGEX.test(handle)) return 'Handle must start with a letter and contain only letters, numbers, and underscores';
+  if (handle.includes('__')) return 'Handle cannot contain consecutive underscores';
+  if (handle.endsWith('_')) return 'Handle cannot end with an underscore';
+  return null;
+}

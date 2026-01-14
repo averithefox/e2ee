@@ -111,6 +111,13 @@ struct  Messages__MessagePayload__Attachment
 , NULL, {0,NULL} }
 
 
+typedef enum {
+  MESSAGES__MESSAGE_PAYLOAD__SYNC__NOT_SET = 0,
+  MESSAGES__MESSAGE_PAYLOAD__SYNC_EDIT_TARGET = 6,
+  MESSAGES__MESSAGE_PAYLOAD__SYNC_DELETE_TARGET = 7
+    PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(MESSAGES__MESSAGE_PAYLOAD__SYNC__CASE)
+} Messages__MessagePayload__SyncCase;
+
 struct  Messages__MessagePayload
 {
   ProtobufCMessage base;
@@ -121,10 +128,26 @@ struct  Messages__MessagePayload
   protobuf_c_boolean has_reply_to;
   ProtobufCBinaryData reply_to;
   int64_t timestamp;
+  /*
+   * Local-only: timestamp when message was last edited
+   */
+  protobuf_c_boolean has_edited_at;
+  int64_t edited_at;
+  Messages__MessagePayload__SyncCase sync_case;
+  union {
+    /*
+     * UUID of message to delete
+     */
+    ProtobufCBinaryData delete_target;
+    /*
+     * UUID of message to edit (text field contains new content)
+     */
+    ProtobufCBinaryData edit_target;
+  };
 };
 #define MESSAGES__MESSAGE_PAYLOAD__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&messages__message_payload__descriptor) \
-, {0,NULL}, NULL, 0,NULL, 0, {0,NULL}, 0 }
+, {0,NULL}, NULL, 0,NULL, 0, {0,NULL}, 0, 0, 0, MESSAGES__MESSAGE_PAYLOAD__SYNC__NOT_SET, { {0} } }
 
 
 /* Messages__Prekey methods */

@@ -649,14 +649,21 @@ export namespace messages {
         }
     }
     export class MessagePayload extends pb_1.Message {
-        #one_of_decls: number[][] = [];
-        constructor(data?: any[] | {
+        #one_of_decls: number[][] = [[6, 7]];
+        constructor(data?: any[] | ({
             uuid: Uint8Array;
             text?: string;
             attachments: MessagePayload.Attachment[];
             reply_to?: Uint8Array;
             timestamp: number;
-        }) {
+            edited_at?: number;
+        } & (({
+            edit_target?: Uint8Array;
+            delete_target?: never;
+        } | {
+            edit_target?: never;
+            delete_target?: Uint8Array;
+        })))) {
             super();
             pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [3], this.#one_of_decls);
             if (!Array.isArray(data) && typeof data == "object") {
@@ -669,6 +676,15 @@ export namespace messages {
                     this.reply_to = data.reply_to;
                 }
                 this.timestamp = data.timestamp;
+                if ("edited_at" in data && data.edited_at != undefined) {
+                    this.edited_at = data.edited_at;
+                }
+                if ("edit_target" in data && data.edit_target != undefined) {
+                    this.edit_target = data.edit_target;
+                }
+                if ("delete_target" in data && data.delete_target != undefined) {
+                    this.delete_target = data.delete_target;
+                }
             }
         }
         get uuid() {
@@ -713,12 +729,52 @@ export namespace messages {
         get has_timestamp() {
             return pb_1.Message.getField(this, 5) != null;
         }
+        get edited_at() {
+            return pb_1.Message.getFieldWithDefault(this, 8, 0) as number;
+        }
+        set edited_at(value: number) {
+            pb_1.Message.setField(this, 8, value);
+        }
+        get has_edited_at() {
+            return pb_1.Message.getField(this, 8) != null;
+        }
+        get edit_target() {
+            return pb_1.Message.getFieldWithDefault(this, 6, new Uint8Array(0)) as Uint8Array;
+        }
+        set edit_target(value: Uint8Array) {
+            pb_1.Message.setOneofField(this, 6, this.#one_of_decls[0], value);
+        }
+        get has_edit_target() {
+            return pb_1.Message.getField(this, 6) != null;
+        }
+        get delete_target() {
+            return pb_1.Message.getFieldWithDefault(this, 7, new Uint8Array(0)) as Uint8Array;
+        }
+        set delete_target(value: Uint8Array) {
+            pb_1.Message.setOneofField(this, 7, this.#one_of_decls[0], value);
+        }
+        get has_delete_target() {
+            return pb_1.Message.getField(this, 7) != null;
+        }
+        get sync() {
+            const cases: {
+                [index: number]: "none" | "edit_target" | "delete_target";
+            } = {
+                0: "none",
+                6: "edit_target",
+                7: "delete_target"
+            };
+            return cases[pb_1.Message.computeOneofCase(this, [6, 7])];
+        }
         static fromObject(data: {
             uuid?: Uint8Array;
             text?: string;
             attachments?: ReturnType<typeof MessagePayload.Attachment.prototype.toObject>[];
             reply_to?: Uint8Array;
             timestamp?: number;
+            edited_at?: number;
+            edit_target?: Uint8Array;
+            delete_target?: Uint8Array;
         }): MessagePayload {
             const message = new MessagePayload({
                 uuid: data.uuid,
@@ -731,6 +787,15 @@ export namespace messages {
             if (data.reply_to != null) {
                 message.reply_to = data.reply_to;
             }
+            if (data.edited_at != null) {
+                message.edited_at = data.edited_at;
+            }
+            if (data.edit_target != null) {
+                message.edit_target = data.edit_target;
+            }
+            if (data.delete_target != null) {
+                message.delete_target = data.delete_target;
+            }
             return message;
         }
         toObject() {
@@ -740,6 +805,9 @@ export namespace messages {
                 attachments?: ReturnType<typeof MessagePayload.Attachment.prototype.toObject>[];
                 reply_to?: Uint8Array;
                 timestamp?: number;
+                edited_at?: number;
+                edit_target?: Uint8Array;
+                delete_target?: Uint8Array;
             } = {};
             if (this.uuid != null) {
                 data.uuid = this.uuid;
@@ -755,6 +823,15 @@ export namespace messages {
             }
             if (this.timestamp != null) {
                 data.timestamp = this.timestamp;
+            }
+            if (this.edited_at != null) {
+                data.edited_at = this.edited_at;
+            }
+            if (this.edit_target != null) {
+                data.edit_target = this.edit_target;
+            }
+            if (this.delete_target != null) {
+                data.delete_target = this.delete_target;
             }
             return data;
         }
@@ -772,6 +849,12 @@ export namespace messages {
                 writer.writeBytes(4, this.reply_to);
             if (this.has_timestamp)
                 writer.writeInt64(5, this.timestamp);
+            if (this.has_edited_at)
+                writer.writeInt64(8, this.edited_at);
+            if (this.has_edit_target)
+                writer.writeBytes(6, this.edit_target);
+            if (this.has_delete_target)
+                writer.writeBytes(7, this.delete_target);
             if (!w)
                 return writer.getResultBuffer();
         }
@@ -795,6 +878,15 @@ export namespace messages {
                         break;
                     case 5:
                         message.timestamp = reader.readInt64();
+                        break;
+                    case 8:
+                        message.edited_at = reader.readInt64();
+                        break;
+                    case 6:
+                        message.edit_target = reader.readBytes();
+                        break;
+                    case 7:
+                        message.delete_target = reader.readBytes();
                         break;
                     default: reader.skipField();
                 }
