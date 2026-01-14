@@ -32,7 +32,7 @@ add_subdirectory(third_party/protobuf-c/build-cmake)
 find_package(OpenSSL REQUIRED)
 find_package(SQLite3 REQUIRED)
 
-set(RS_CRYPTO_DIR "${CMAKE_SOURCE_DIR}/../rs-crypto")
+get_filename_component(RS_CRYPTO_DIR "${CMAKE_SOURCE_DIR}/../rs-crypto" ABSOLUTE)
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   set(CARGO_BUILD_TYPE "--release")
   set(CARGO_TARGET_DIR "release")
@@ -48,21 +48,24 @@ else()
 endif()
 
 add_custom_command(
-  OUTPUT ${RS_CRYPTO_LIB}
+  OUTPUT "${RS_CRYPTO_LIB}"
   COMMAND cargo build ${CARGO_BUILD_TYPE}
-  WORKING_DIRECTORY ${RS_CRYPTO_DIR}
+  WORKING_DIRECTORY "${RS_CRYPTO_DIR}"
   COMMENT "Building rs-crypto Rust library"
+  VERBATIM
 )
 
-add_custom_target(rs_crypto DEPENDS ${RS_CRYPTO_LIB})
+add_custom_target(rs_crypto ALL DEPENDS "${RS_CRYPTO_LIB}")
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
   protobuf-c
   SQLite::SQLite3
   OpenSSL::SSL
   OpenSSL::Crypto
-  ${RS_CRYPTO_LIB}
+  "${RS_CRYPTO_LIB}"
 )
+
+add_dependencies(${CMAKE_PROJECT_NAME} rs_crypto)
 
 if(UNIX AND NOT APPLE)
   target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE rt)
@@ -76,7 +79,7 @@ target_include_directories(${CMAKE_PROJECT_NAME}
     "third_party/protobuf-c"
     "third_party/protobuf-c/protobuf-c"
     "third_party/mongoose"
-    "../rs-crypto/include"
+    "${RS_CRYPTO_DIR}/include"
 )
 
 set_source_files_properties(${SOURCES} PROPERTIES COMPILE_FLAGS "-Wall -Wextra -Wpedantic -Werror")
