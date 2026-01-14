@@ -58,7 +58,7 @@ add_custom_target(rs_crypto DEPENDS ${RS_CRYPTO_LIB})
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
   protobuf-c
-  SQLite3
+  SQLite::SQLite3
   OpenSSL::SSL
   OpenSSL::Crypto
   ${RS_CRYPTO_LIB}
