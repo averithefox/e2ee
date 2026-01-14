@@ -19,6 +19,7 @@
     "dexie": "^4.2.1",
     "dexie-react-hooks": "^4.2.0",
     "google-protobuf": "^4.0.1",
+    "libsodium-wrappers": "^0.8.0",
     "lucide-react": "^0.562.0",
     "mlkem": "^2.5.0",
     "neverthrow": "^8.2.0",

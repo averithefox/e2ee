@@ -18,6 +18,7 @@
         "dexie": "^4.2.1",
         "dexie-react-hooks": "^4.2.0",
         "google-protobuf": "^4.0.1",
+        "libsodium-wrappers": "^0.8.0",
         "lucide-react": "^0.562.0",
         "mlkem": "^2.5.0",
         "neverthrow": "^8.2.0",
@@ -568,6 +569,10 @@
     "jsonfile": ["jsonfile@6.2.0", "", { "dependencies": { "universalify": "^2.0.0" }, "optionalDependencies": { "graceful-fs": "^4.1.6" } }, "sha512-FGuPw30AdOIUTRMC2OMRtQV+jkVj2cfPqSeWXv1NEAJ1qZ5zb1X6z1mFhbfOB/iy3ssJCD+3KuZ8r8C3uVFlAg=="],
 
     "kleur": ["kleur@4.1.5", "", {}, "sha512-o+NO+8WrRiQEE4/7nwRJhN1HWpVmJm511pBHUxPLtp0BUISzlBplORYSmTclCnJvQq2tKu/sgl3xVpkc7ZWuQQ=="],
+
+    "libsodium": ["libsodium@0.8.0", "", {}, "sha512-GQ4Sg0/Z0Ui6ZvKeTd8bH7VAAqk1ZHZDAo/pcuSi0uPbIN6LYAAotR0GEYb8v+y4/tSsXZPr06D6hhqKd7tnoQ=="],
+
+    "libsodium-wrappers": ["libsodium-wrappers@0.8.0", "", { "dependencies": { "libsodium": "^0.8.0" } }, "sha512-PVyXAtP1nmpQrDKAVnA8pir0f7bj7vmMGs7mb+0OCSJ+BOfLNBb5hPy2GHfrx6cQ+Co9fMliR5R0WRbVuMllNA=="],
 
     "lines-and-columns": ["lines-and-columns@1.2.4", "", {}, "sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg=="],
 
