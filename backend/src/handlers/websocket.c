@@ -23,7 +23,7 @@ static bool ws_send(struct mg_connection *c,
   void *buf = malloc(n);
   if (!buf) {
     fprintf(stderr, "[%s:%d] out of memory\n", __func__, __LINE__);
-    return FALSE;
+    return false;
   }
   websocket__clientbound_message__pack(env, buf);
   if (to_id == SELF) {
@@ -32,7 +32,7 @@ static bool ws_send(struct mg_connection *c,
     ws_send_by_id(c->mgr, to_id, buf, n);
   }
   free(buf);
-  return TRUE;
+  return true;
 }
 
 static bool ws_ack(struct mg_connection *c, int64_t message_id,
@@ -40,7 +40,7 @@ static bool ws_ack(struct mg_connection *c, int64_t message_id,
   Websocket__Ack ack = WEBSOCKET__ACK__INIT;
   ack.message_id = message_id;
   if ((int)error != -1) {
-    ack.has_error = TRUE;
+    ack.has_error = true;
     ack.error = error;
   }
 
