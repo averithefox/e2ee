@@ -7,6 +7,9 @@ set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native")
+if(UNIX AND NOT APPLE)
+  add_definitions(-D_GNU_SOURCE)
+endif()
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -g3")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3")
 
@@ -23,6 +26,7 @@ add_executable(${CMAKE_PROJECT_NAME}
 add_subdirectory(third_party/protobuf-c/build-cmake)
 
 find_package(OpenSSL REQUIRED)
+find_package(SQLite3 REQUIRED)
 
 set(RS_CRYPTO_DIR "${CMAKE_SOURCE_DIR}/../rs-crypto")
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
@@ -33,7 +37,11 @@ else()
   set(CARGO_TARGET_DIR "debug")
 endif()
 
-set(RS_CRYPTO_LIB "${RS_CRYPTO_DIR}/target/${CARGO_TARGET_DIR}/libcrypto.dylib")
+if(APPLE)
+  set(RS_CRYPTO_LIB "${RS_CRYPTO_DIR}/target/${CARGO_TARGET_DIR}/libcrypto.dylib")
+else()
+  set(RS_CRYPTO_LIB "${RS_CRYPTO_DIR}/target/${CARGO_TARGET_DIR}/libcrypto.so")
+endif()
 
 add_custom_command(
   OUTPUT ${RS_CRYPTO_LIB}
@@ -46,11 +54,15 @@ add_custom_target(rs_crypto DEPENDS ${RS_CRYPTO_LIB})
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
   protobuf-c
-  sqlite3
+  SQLite3
   OpenSSL::SSL
   OpenSSL::Crypto
   ${RS_CRYPTO_LIB}
 )
+
+if(UNIX AND NOT APPLE)
+  target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE rt)
+endif()
 
 target_include_directories(${CMAKE_PROJECT_NAME}
   PUBLIC
