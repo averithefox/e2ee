@@ -706,7 +706,7 @@ const ProtobufCMessageDescriptor messages__message_payload__attachment__descript
   (ProtobufCMessageInit) messages__message_payload__attachment__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor messages__message_payload__field_descriptors[3] =
+static const ProtobufCFieldDescriptor messages__message_payload__field_descriptors[5] =
 {
   {
     "uuid",
@@ -744,16 +744,42 @@ static const ProtobufCFieldDescriptor messages__message_payload__field_descripto
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "reply_to",
+    4,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_BYTES,
+    offsetof(Messages__MessagePayload, has_reply_to),
+    offsetof(Messages__MessagePayload, reply_to),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "timestamp",
+    5,
+    PROTOBUF_C_LABEL_REQUIRED,
+    PROTOBUF_C_TYPE_INT64,
+    0,   /* quantifier_offset */
+    offsetof(Messages__MessagePayload, timestamp),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned messages__message_payload__field_indices_by_name[] = {
   2,   /* field[2] = attachments */
+  3,   /* field[3] = reply_to */
   1,   /* field[1] = text */
+  4,   /* field[4] = timestamp */
   0,   /* field[0] = uuid */
 };
 static const ProtobufCIntRange messages__message_payload__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 3 }
+  { 0, 5 }
 };
 const ProtobufCMessageDescriptor messages__message_payload__descriptor =
 {
@@ -763,7 +789,7 @@ const ProtobufCMessageDescriptor messages__message_payload__descriptor =
   "Messages__MessagePayload",
   "messages",
   sizeof(Messages__MessagePayload),
-  3,
+  5,
   messages__message_payload__field_descriptors,
   messages__message_payload__field_indices_by_name,
   1,  messages__message_payload__number_ranges,

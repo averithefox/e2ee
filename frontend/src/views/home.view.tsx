@@ -1,9 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { messages as messages_proto } from 'generated/messages';
 import { websocket } from 'generated/websocket';
-import { Loader2, OctagonX, Plus, Send, SidebarClose, SidebarOpen } from 'lucide-react';
+import { CornerDownLeft, Loader2, OctagonX, Plus, Reply, SidebarClose, SidebarOpen, X } from 'lucide-react';
 import { err, ok, type Result } from 'neverthrow';
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useLocation } from 'wouter';
 import NewConversationModal from '~/components/new-conversation-modal';
 import { Button } from '~/components/ui/button';
@@ -14,21 +14,48 @@ import { db } from '~/lib/db';
 import { decryptLocal, encryptLocal, recvMessage, sendMessage } from '~/lib/protocol';
 import { cn, eq } from '~/lib/utils';
 
+type MessageData = {
+  id: Uint8Array;
+  sender: string;
+  text: string | null;
+  timestamp: number;
+  reply_to: Uint8Array | null;
+};
+
+function formatTime(timestamp: number): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+
+  const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  if (isToday) return time;
+  if (isYesterday) return `Yesterday ${time}`;
+  return `${date.toLocaleDateString([], { month: 'short', day: 'numeric' })} ${time}`;
+}
+
 export function HomeView() {
   const [, navigate] = useLocation();
 
   const wsRef = useRef<(WebSocket & { msgId: number; connectAttempts: number }) | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null!);
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [status, setStatus] = useState<Result<string, string> | null>();
   const [identity, setIdentity] = useState<{ handle: string; sigKey: Uint8Array }>(null!);
   const [newConvoOpen, setNewConvoOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
+  const [replyingTo, setReplyingTo] = useState<MessageData | null>(null);
+  const [highlightedMsgId, setHighlightedMsgId] = useState<Uint8Array | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const contacts = useLiveQuery(async () => {
     const messages = await db.messages.toArray();
     const peers = Array.from(new Set(messages.map(msg => msg.peer)));
-    return await Promise.all(
+    return Promise.all(
       peers.map(async handle => {
         const lastMessage = (await db.messages.where({ peer: handle }).last()) ?? null;
         if (!lastMessage) return { handle, lastMessage };
@@ -45,21 +72,44 @@ export function HomeView() {
     );
   });
 
-  const messages = useLiveQuery(async () => {
+  const messages = useLiveQuery(async (): Promise<MessageData[]> => {
     if (!selectedContact) return [];
     const messages = await db.messages.where({ peer: selectedContact }).toArray();
-    return Promise.all(
-      messages.map(async ({ id, sender, ciphertext, nonce }) => {
+    const decrypted = await Promise.all(
+      messages.map(async ({ sender, ciphertext, nonce }): Promise<MessageData> => {
         const plaintext = await decryptLocal(ciphertext, nonce);
         const payload = messages_proto.MessagePayload.deserialize(plaintext);
         return {
           id: payload.uuid,
           sender,
-          text: payload.text ?? ''
+          text: payload.has_text ? payload.text : null,
+          timestamp: payload.timestamp,
+          reply_to: payload.has_reply_to ? payload.reply_to : null
         };
       })
     );
+    return decrypted.sort((a, b) => a.timestamp - b.timestamp);
   }, [selectedContact]);
+
+  const scrollToMessage = useCallback((targetId: Uint8Array) => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const idStr = Array.from(targetId).join(',');
+    const el = container.querySelector(`[data-msg-id="${idStr}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlightedMsgId(targetId);
+      setTimeout(() => setHighlightedMsgId(null), 1500);
+    }
+  }, []);
+
+  const findMessageById = useCallback(
+    (id: Uint8Array): MessageData | undefined => {
+      return messages?.find(m => eq(m.id, id));
+    },
+    [messages]
+  );
 
   async function send(
     ws: WebSocket & { msgId: number },
@@ -97,7 +147,13 @@ export function HomeView() {
 
   const handleStartConversation: Parameters<typeof NewConversationModal>[0]['onStart'] = handle => {
     setSelectedContact(handle);
+    setReplyingTo(null);
     setNewConvoOpen(false);
+  };
+
+  const handleSelectContact = (handle: string) => {
+    setSelectedContact(handle);
+    setReplyingTo(null);
   };
 
   async function handleSend(e: FormEvent) {
@@ -108,11 +164,15 @@ export function HomeView() {
     if (!input || !content?.trim() || !selectedContact) return;
 
     input.value = '';
+    const currentReplyTo = replyingTo;
+    setReplyingTo(null);
 
     const payload = new messages_proto.MessagePayload({
       uuid: randomBytes(16),
       text: content,
-      attachments: []
+      attachments: [],
+      timestamp: Date.now(),
+      ...(currentReplyTo && { reply_to: currentReplyTo.id })
     });
 
     const forward = await sendMessage(selectedContact, payload, async handle => {
@@ -225,7 +285,7 @@ export function HomeView() {
         onClose={() => setNewConvoOpen(false)}
         onStart={handleStartConversation}
       />
-      <main className="bg-background text-foreground flex h-screen">
+      <main className="bg-background text-foreground flex h-screen overflow-hidden">
         <aside
           className={cn(
             'bg-card border-border flex shrink-0 flex-col border-r transition-all duration-200',
@@ -256,7 +316,7 @@ export function HomeView() {
               contactsList.map(contact => (
                 <button
                   key={contact.handle}
-                  onClick={() => setSelectedContact(contact.handle)}
+                  onClick={() => handleSelectContact(contact.handle)}
                   className={cn(
                     'border-border flex w-full items-center gap-3 border-b px-4 py-3 text-left transition-colors',
                     contact.handle === selectedContact ? 'bg-accent text-accent-foreground' : 'hover:bg-muted/50'
@@ -295,7 +355,7 @@ export function HomeView() {
             )}
           </header>
 
-          <div className="flex-1 overflow-y-auto p-4">
+          <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4">
             {!selectedContact ? (
               <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
                 Select a contact to start chatting
@@ -306,45 +366,106 @@ export function HomeView() {
               </div>
             ) : (
               <div className="mx-auto max-w-2xl space-y-3">
-                {messages?.map(msg => (
-                  <div
-                    key={msg.id.toString()}
-                    className={cn('flex', msg.sender === identity.handle ? 'justify-end' : 'justify-start')}
-                  >
+                {messages?.map(msg => {
+                  const isOwn = msg.sender === identity.handle;
+                  const idStr = Array.from(msg.id).join(',');
+                  const isHighlighted = highlightedMsgId && eq(highlightedMsgId, msg.id);
+                  const repliedMessage = msg.reply_to ? findMessageById(msg.reply_to) : null;
+
+                  return (
                     <div
-                      className={cn(
-                        'max-w-[75%] rounded-lg px-3 py-2 text-sm',
-                        msg.sender === identity.handle
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted text-foreground'
-                      )}
+                      key={idStr}
+                      data-msg-id={idStr}
+                      className={cn('group flex items-end gap-2', isOwn ? 'flex-row-reverse' : 'flex-row')}
                     >
-                      {msg.text}
+                      <div
+                        className={cn(
+                          'max-w-[75%] transition-all duration-300',
+                          isHighlighted && 'ring-ring ring-offset-background scale-[1.02] ring-2 ring-offset-2'
+                        )}
+                      >
+                        {msg.reply_to && (
+                          <button
+                            type="button"
+                            onClick={() => scrollToMessage(msg.reply_to!)}
+                            className={cn(
+                              'mb-1 flex w-full items-center gap-1.5 rounded-t-lg border-l-2 px-2.5 py-1.5 text-left text-xs transition-colors',
+                              isOwn
+                                ? 'border-primary-foreground/40 bg-primary/80 text-primary-foreground/70 hover:bg-primary/90'
+                                : 'border-muted-foreground/40 bg-muted/80 text-muted-foreground hover:bg-muted/90'
+                            )}
+                          >
+                            <CornerDownLeft className="size-3 shrink-0" />
+                            <span className="truncate">
+                              {repliedMessage
+                                ? repliedMessage.text?.slice(0, 50) +
+                                  (repliedMessage.text && repliedMessage.text.length > 50 ? '…' : '')
+                                : 'Original message'}
+                            </span>
+                          </button>
+                        )}
+
+                        <div
+                          className={cn(
+                            'rounded-lg px-3 py-2 text-sm',
+                            msg.reply_to && 'rounded-t-none',
+                            isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
+                          )}
+                        >
+                          <p>{msg.text}</p>
+                          <p
+                            className={cn(
+                              'mt-1 text-[10px]',
+                              isOwn ? 'text-primary-foreground/60' : 'text-muted-foreground'
+                            )}
+                          >
+                            {formatTime(msg.timestamp)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => {
+                          setReplyingTo(msg);
+                          inputRef.current.focus();
+                        }}
+                        className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                        aria-label="Reply to message"
+                      >
+                        <Reply className="size-3.5" />
+                      </Button>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
 
           <div className="shrink-0 p-2">
+            {replyingTo && (
+              <div className="bg-muted/50 border-primary mb-2 flex items-center gap-2 rounded-lg border-l-2 px-3 py-2">
+                <Reply className="text-muted-foreground size-4 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-muted-foreground text-xs font-medium">
+                    Replying to {replyingTo.sender === identity.handle ? 'yourself' : replyingTo.sender}
+                  </p>
+                  <p className="truncate text-sm">{replyingTo.text}</p>
+                </div>
+                <Button variant="ghost" size="icon-sm" onClick={() => setReplyingTo(null)} aria-label="Cancel reply">
+                  <X className="size-4" />
+                </Button>
+              </div>
+            )}
             <form onSubmit={handleSend} className="relative">
               <Input
+                ref={inputRef}
                 type="text"
                 placeholder={selectedContact ? `Message ${selectedContact}` : 'Select a contact first'}
                 disabled={!selectedContact}
                 className="bg-background dark:bg-background h-11 pr-11"
               />
-              <Button
-                variant="outline"
-                type="submit"
-                size="icon-sm"
-                disabled={!selectedContact}
-                className="absolute top-1/2 right-1.5 -translate-y-1/2"
-              >
-                <Send className="size-4" />
-                <span className="sr-only">Send</span>
-              </Button>
             </form>
           </div>
         </div>

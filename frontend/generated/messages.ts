@@ -654,6 +654,8 @@ export namespace messages {
             uuid: Uint8Array;
             text?: string;
             attachments: MessagePayload.Attachment[];
+            reply_to?: Uint8Array;
+            timestamp: number;
         }) {
             super();
             pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [3], this.#one_of_decls);
@@ -663,6 +665,10 @@ export namespace messages {
                     this.text = data.text;
                 }
                 this.attachments = data.attachments;
+                if ("reply_to" in data && data.reply_to != undefined) {
+                    this.reply_to = data.reply_to;
+                }
+                this.timestamp = data.timestamp;
             }
         }
         get uuid() {
@@ -689,17 +695,41 @@ export namespace messages {
         set attachments(value: MessagePayload.Attachment[]) {
             pb_1.Message.setRepeatedWrapperField(this, 3, value);
         }
+        get reply_to() {
+            return pb_1.Message.getFieldWithDefault(this, 4, new Uint8Array(0)) as Uint8Array;
+        }
+        set reply_to(value: Uint8Array) {
+            pb_1.Message.setField(this, 4, value);
+        }
+        get has_reply_to() {
+            return pb_1.Message.getField(this, 4) != null;
+        }
+        get timestamp() {
+            return pb_1.Message.getField(this, 5) as number;
+        }
+        set timestamp(value: number) {
+            pb_1.Message.setField(this, 5, value);
+        }
+        get has_timestamp() {
+            return pb_1.Message.getField(this, 5) != null;
+        }
         static fromObject(data: {
             uuid?: Uint8Array;
             text?: string;
             attachments?: ReturnType<typeof MessagePayload.Attachment.prototype.toObject>[];
+            reply_to?: Uint8Array;
+            timestamp?: number;
         }): MessagePayload {
             const message = new MessagePayload({
                 uuid: data.uuid,
-                attachments: data.attachments.map(item => MessagePayload.Attachment.fromObject(item))
+                attachments: data.attachments.map(item => MessagePayload.Attachment.fromObject(item)),
+                timestamp: data.timestamp
             });
             if (data.text != null) {
                 message.text = data.text;
+            }
+            if (data.reply_to != null) {
+                message.reply_to = data.reply_to;
             }
             return message;
         }
@@ -708,6 +738,8 @@ export namespace messages {
                 uuid?: Uint8Array;
                 text?: string;
                 attachments?: ReturnType<typeof MessagePayload.Attachment.prototype.toObject>[];
+                reply_to?: Uint8Array;
+                timestamp?: number;
             } = {};
             if (this.uuid != null) {
                 data.uuid = this.uuid;
@@ -717,6 +749,12 @@ export namespace messages {
             }
             if (this.attachments != null) {
                 data.attachments = this.attachments.map((item: MessagePayload.Attachment) => item.toObject());
+            }
+            if (this.reply_to != null) {
+                data.reply_to = this.reply_to;
+            }
+            if (this.timestamp != null) {
+                data.timestamp = this.timestamp;
             }
             return data;
         }
@@ -730,6 +768,10 @@ export namespace messages {
                 writer.writeString(2, this.text);
             if (this.attachments.length)
                 writer.writeRepeatedMessage(3, this.attachments, (item: MessagePayload.Attachment) => item.serialize(writer));
+            if (this.has_reply_to && this.reply_to.length)
+                writer.writeBytes(4, this.reply_to);
+            if (this.has_timestamp)
+                writer.writeInt64(5, this.timestamp);
             if (!w)
                 return writer.getResultBuffer();
         }
@@ -747,6 +789,12 @@ export namespace messages {
                         break;
                     case 3:
                         reader.readMessage(message.attachments, () => pb_1.Message.addToRepeatedWrapperField(message, 3, MessagePayload.Attachment.deserialize(reader), MessagePayload.Attachment));
+                        break;
+                    case 4:
+                        message.reply_to = reader.readBytes();
+                        break;
+                    case 5:
+                        message.timestamp = reader.readInt64();
                         break;
                     default: reader.skipField();
                 }

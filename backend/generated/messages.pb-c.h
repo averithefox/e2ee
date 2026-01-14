@@ -118,10 +118,13 @@ struct  Messages__MessagePayload
   char *text;
   size_t n_attachments;
   Messages__MessagePayload__Attachment **attachments;
+  protobuf_c_boolean has_reply_to;
+  ProtobufCBinaryData reply_to;
+  int64_t timestamp;
 };
 #define MESSAGES__MESSAGE_PAYLOAD__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&messages__message_payload__descriptor) \
-, {0,NULL}, NULL, 0,NULL }
+, {0,NULL}, NULL, 0,NULL, 0, {0,NULL}, 0 }
 
 
 /* Messages__Prekey methods */
