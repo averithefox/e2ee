@@ -1,4 +1,8 @@
 cmake_minimum_required(VERSION 3.24)
+
+set(CMAKE_C_COMPILER /usr/bin/clang)
+set(CMAKE_CXX_COMPILER /usr/bin/clang++)
+
 project(chat_server LANGUAGES C)
 
 set(CMAKE_C_STANDARD 11)
