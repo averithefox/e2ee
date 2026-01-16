@@ -4,8 +4,9 @@ import { MessageBubble } from '~/components/message-bubble';
 import { MessageInput, type MessageInputHandle } from '~/components/message-input';
 import NewConversationModal from '~/components/new-conversation-modal';
 import { Button } from '~/components/ui/button';
-import { useChat, type MessageData } from '~/hooks/use-chat';
-import { cn, eq } from '~/lib/utils';
+import { useChat } from '~/hooks/use-chat';
+import type { Message } from '~/lib/db';
+import { cn } from '~/lib/utils';
 
 // Hook to detect mobile viewport
 function useIsMobile(breakpoint = 768) {
@@ -32,7 +33,7 @@ export function HomeView() {
     setSelectedContact,
     contactsList,
     messages,
-    sendNewMessage,
+    sendMessage,
     editMessage,
     deleteMessage
   } = useChat();
@@ -40,18 +41,17 @@ export function HomeView() {
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [newConvoOpen, setNewConvoOpen] = useState(false);
-  const [replyingTo, setReplyingTo] = useState<MessageData | null>(null);
-  const [highlightedMsgId, setHighlightedMsgId] = useState<Uint8Array | null>(null);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [highlightedMsgId, setHighlightedMsgId] = useState<Message['id'] | null>(null);
 
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<MessageInputHandle>(null);
 
-  const scrollToMessage = useCallback((targetId: Uint8Array) => {
+  const scrollToMessage = useCallback((targetId: Message['id']) => {
     const container = messagesContainerRef.current;
     if (!container) return;
 
-    const idStr = Array.from(targetId).join(',');
-    const el = container.querySelector(`[data-msg-id="${idStr}"]`);
+    const el = container.querySelector(`[data-msg-id="${targetId}"]`);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       setHighlightedMsgId(targetId);
@@ -60,8 +60,8 @@ export function HomeView() {
   }, []);
 
   const findMessageById = useCallback(
-    (id: Uint8Array): MessageData | undefined => {
-      return messages?.find(m => eq(m.id, id));
+    (id: Message['id']): Message | undefined => {
+      return messages?.find(m => m.id === id);
     },
     [messages]
   );
@@ -86,17 +86,17 @@ export function HomeView() {
   );
 
   const handleSend = useCallback(
-    async (text: string, replyToId?: Uint8Array) => {
-      const success = await sendNewMessage(text, replyToId);
+    async (text: string, replyToId?: Message['id']) => {
+      const success = await sendMessage(text, replyToId);
       if (success) {
         setReplyingTo(null);
       }
       return success;
     },
-    [sendNewMessage]
+    [sendMessage]
   );
 
-  const handleReply = useCallback((msg: MessageData) => {
+  const handleReply = useCallback((msg: Message) => {
     setReplyingTo(msg);
     inputRef.current?.focus();
   }, []);
@@ -127,7 +127,6 @@ export function HomeView() {
       />
 
       <main className="bg-background text-foreground flex h-screen overflow-hidden">
-        {/* Mobile backdrop */}
         {isMobile && sidebarOpen && (
           <div
             className="bg-background/80 fixed inset-0 z-40 backdrop-blur-sm"
@@ -136,15 +135,11 @@ export function HomeView() {
           />
         )}
 
-        {/* Sidebar */}
         <aside
           className={cn(
             'bg-card border-border flex shrink-0 flex-col border-r transition-all duration-200',
-            // Mobile: fixed overlay
             isMobile && 'fixed inset-y-0 left-0 z-50 shadow-xl',
-            // Desktop: inline
             !isMobile && (sidebarOpen ? 'w-72' : 'w-0 overflow-hidden border-r-0'),
-            // Mobile: slide in/out
             isMobile && (sidebarOpen ? 'w-72 translate-x-0' : 'w-72 -translate-x-full')
           )}
         >
@@ -199,9 +194,7 @@ export function HomeView() {
           </div>
         </aside>
 
-        {/* Main chat area */}
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* Header */}
           <header className="border-border flex h-14 shrink-0 items-center gap-3 border-b px-4">
             <Button
               variant="ghost"
@@ -218,7 +211,6 @@ export function HomeView() {
             )}
           </header>
 
-          {/* Messages */}
           <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-2 py-3 sm:p-4">
             {!selectedContact ? (
               <div className="text-muted-foreground flex h-full items-center justify-center px-4 text-center text-sm">
@@ -232,22 +224,21 @@ export function HomeView() {
               <div className="mx-auto max-w-2xl space-y-2 sm:space-y-3">
                 {messages?.map(msg => (
                   <MessageBubble
-                    key={Array.from(msg.id).join(',')}
+                    key={msg.id}
                     message={msg}
                     isOwn={msg.sender === identity.handle}
-                    isHighlighted={!!(highlightedMsgId && eq(highlightedMsgId, msg.id))}
-                    repliedMessage={msg.replyTo ? (findMessageById(msg.replyTo) ?? null) : null}
+                    isHighlighted={highlightedMsgId === msg.id}
+                    repliedMessage={msg.reply_to ? (findMessageById(msg.reply_to) ?? null) : null}
                     onReply={() => handleReply(msg)}
                     onEdit={newText => editMessage(msg, newText)}
                     onDelete={() => deleteMessage(msg)}
-                    onScrollToReply={() => msg.replyTo && scrollToMessage(msg.replyTo)}
+                    onScrollToReply={() => msg.reply_to && scrollToMessage(msg.reply_to)}
                   />
                 ))}
               </div>
             )}
           </div>
 
-          {/* Input */}
           <MessageInput
             ref={inputRef}
             placeholder={selectedContact ? `Message ${selectedContact}` : 'Select a contact first'}

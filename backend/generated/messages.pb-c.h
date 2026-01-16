@@ -20,8 +20,6 @@ typedef struct Messages__SignedPrekey Messages__SignedPrekey;
 typedef struct Messages__PQXDHKeyBundle Messages__PQXDHKeyBundle;
 typedef struct Messages__Identity Messages__Identity;
 typedef struct Messages__IdentityPatch Messages__IdentityPatch;
-typedef struct Messages__MessagePayload Messages__MessagePayload;
-typedef struct Messages__MessagePayload__Attachment Messages__MessagePayload__Attachment;
 
 
 /* --- enums --- */
@@ -56,8 +54,17 @@ struct  Messages__PQXDHKeyBundle
 {
   ProtobufCMessage base;
   ProtobufCBinaryData id_key;
+  /*
+   * always null on dry run
+   */
   Messages__SignedPrekey *prekey;
+  /*
+   * always null on dry run
+   */
   Messages__SignedPrekey *pqkem_prekey;
+  /*
+   * always null on dry run
+   */
   Messages__Prekey *one_time_prekey;
 };
 #define MESSAGES__PQXDHKEY_BUNDLE__INIT \
@@ -98,56 +105,6 @@ struct  Messages__IdentityPatch
 #define MESSAGES__IDENTITY_PATCH__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&messages__identity_patch__descriptor) \
 , NULL, NULL, 0,NULL, 0,NULL }
-
-
-struct  Messages__MessagePayload__Attachment
-{
-  ProtobufCMessage base;
-  char *mime_type;
-  ProtobufCBinaryData data;
-};
-#define MESSAGES__MESSAGE_PAYLOAD__ATTACHMENT__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&messages__message_payload__attachment__descriptor) \
-, NULL, {0,NULL} }
-
-
-typedef enum {
-  MESSAGES__MESSAGE_PAYLOAD__SYNC__NOT_SET = 0,
-  MESSAGES__MESSAGE_PAYLOAD__SYNC_EDIT_TARGET = 6,
-  MESSAGES__MESSAGE_PAYLOAD__SYNC_DELETE_TARGET = 7
-    PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(MESSAGES__MESSAGE_PAYLOAD__SYNC__CASE)
-} Messages__MessagePayload__SyncCase;
-
-struct  Messages__MessagePayload
-{
-  ProtobufCMessage base;
-  ProtobufCBinaryData uuid;
-  char *text;
-  size_t n_attachments;
-  Messages__MessagePayload__Attachment **attachments;
-  protobuf_c_boolean has_reply_to;
-  ProtobufCBinaryData reply_to;
-  int64_t timestamp;
-  /*
-   * Local-only: timestamp when message was last edited
-   */
-  protobuf_c_boolean has_edited_at;
-  int64_t edited_at;
-  Messages__MessagePayload__SyncCase sync_case;
-  union {
-    /*
-     * UUID of message to delete
-     */
-    ProtobufCBinaryData delete_target;
-    /*
-     * UUID of message to edit (text field contains new content)
-     */
-    ProtobufCBinaryData edit_target;
-  };
-};
-#define MESSAGES__MESSAGE_PAYLOAD__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&messages__message_payload__descriptor) \
-, {0,NULL}, NULL, 0,NULL, 0, {0,NULL}, 0, 0, 0, MESSAGES__MESSAGE_PAYLOAD__SYNC__NOT_SET, { {0} } }
 
 
 /* Messages__Prekey methods */
@@ -245,28 +202,6 @@ Messages__IdentityPatch *
 void   messages__identity_patch__free_unpacked
                      (Messages__IdentityPatch *message,
                       ProtobufCAllocator *allocator);
-/* Messages__MessagePayload__Attachment methods */
-void   messages__message_payload__attachment__init
-                     (Messages__MessagePayload__Attachment         *message);
-/* Messages__MessagePayload methods */
-void   messages__message_payload__init
-                     (Messages__MessagePayload         *message);
-size_t messages__message_payload__get_packed_size
-                     (const Messages__MessagePayload   *message);
-size_t messages__message_payload__pack
-                     (const Messages__MessagePayload   *message,
-                      uint8_t             *out);
-size_t messages__message_payload__pack_to_buffer
-                     (const Messages__MessagePayload   *message,
-                      ProtobufCBuffer     *buffer);
-Messages__MessagePayload *
-       messages__message_payload__unpack
-                     (ProtobufCAllocator  *allocator,
-                      size_t               len,
-                      const uint8_t       *data);
-void   messages__message_payload__free_unpacked
-                     (Messages__MessagePayload *message,
-                      ProtobufCAllocator *allocator);
 /* --- per-message closures --- */
 
 typedef void (*Messages__Prekey_Closure)
@@ -284,12 +219,6 @@ typedef void (*Messages__Identity_Closure)
 typedef void (*Messages__IdentityPatch_Closure)
                  (const Messages__IdentityPatch *message,
                   void *closure_data);
-typedef void (*Messages__MessagePayload__Attachment_Closure)
-                 (const Messages__MessagePayload__Attachment *message,
-                  void *closure_data);
-typedef void (*Messages__MessagePayload_Closure)
-                 (const Messages__MessagePayload *message,
-                  void *closure_data);
 
 /* --- services --- */
 
@@ -301,8 +230,6 @@ extern const ProtobufCMessageDescriptor messages__signed_prekey__descriptor;
 extern const ProtobufCMessageDescriptor messages__pqxdhkey_bundle__descriptor;
 extern const ProtobufCMessageDescriptor messages__identity__descriptor;
 extern const ProtobufCMessageDescriptor messages__identity_patch__descriptor;
-extern const ProtobufCMessageDescriptor messages__message_payload__descriptor;
-extern const ProtobufCMessageDescriptor messages__message_payload__attachment__descriptor;
 
 PROTOBUF_C__END_DECLS
 

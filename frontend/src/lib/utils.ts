@@ -3,6 +3,7 @@ import type { Result } from 'neverthrow';
 import { twMerge } from 'tailwind-merge';
 
 export type ResultPromise<T, E> = Promise<Result<T, E>>;
+export type Nullish<T> = T | null | undefined;
 
 export function concat(...arrays: Uint8Array[]) {
   const total = arrays.reduce((sum, arr) => sum + arr.length, 0);

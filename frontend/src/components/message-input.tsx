@@ -1,6 +1,6 @@
 import { Reply, X } from 'lucide-react';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react';
-import type { MessageData } from '~/hooks/use-chat';
+import type { Message } from '~/lib/db';
 import { cn } from '~/lib/utils';
 import { Button } from './ui/button';
 
@@ -11,10 +11,10 @@ const LINE_HEIGHT = 20; // Approximate line height in pixels
 interface MessageInputProps {
   placeholder?: string;
   disabled?: boolean;
-  replyingTo: MessageData | null;
+  replyingTo: Message | null;
   identityHandle: string;
   onCancelReply: () => void;
-  onSend: (text: string, replyToId?: Uint8Array) => Promise<boolean>;
+  onSend: (text: string, replyToId?: Message['id']) => Promise<boolean>;
 }
 
 export interface MessageInputHandle {

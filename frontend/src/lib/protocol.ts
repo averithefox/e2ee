@@ -3,6 +3,7 @@ import { hkdf } from '@noble/hashes/hkdf.js';
 import { hmac } from '@noble/hashes/hmac.js';
 import { sha256, sha512 } from '@noble/hashes/sha2.js';
 import { messages } from 'generated/messages';
+import { secret } from 'generated/secret';
 import { websocket } from 'generated/websocket';
 import sodium from 'libsodium-wrappers';
 import { MlKem1024 } from 'mlkem';
@@ -171,8 +172,14 @@ export function verifyKeyBundle(bundle: messages.PQXDHKeyBundle, idKeyOverride?:
 
 export async function sendMessage(
   to: string,
-  payload: messages.MessagePayload,
-  keyBundleProvider?: (handle: string) => ResultPromise<messages.PQXDHKeyBundle, any>
+  payload: secret.Payload,
+  {
+    keyBundleProvider,
+    session
+  }: {
+    keyBundleProvider?: (handle: string) => ResultPromise<messages.PQXDHKeyBundle, any>;
+    session?: Session | null;
+  } = {}
 ) {
   const identity = await db.identity.limit(1).first();
   if (!identity) {
@@ -180,14 +187,20 @@ export async function sendMessage(
   }
 
   const encoder = new TextEncoder();
-  const session = await db.sessions.where({ peer: to }).first();
+  if (session === undefined) {
+    session = await db.sessions.where({ peer: to }).first();
+  }
 
   if (!session) {
     const res = await (keyBundleProvider ?? fetchKeyBundle)(to);
     if (res.isErr()) {
-      throw new Error(`failed to fetch key bundle`);
+      throw new Error('failed to fetch key bundle');
     }
     const bundle = res.value;
+
+    if (!bundle.has_prekey || !bundle.has_pqkem_prekey) {
+      throw new Error('incomplete key bundle');
+    }
 
     if (!verifyKeyBundle(bundle)) {
       throw new Error('signature verification failed');
@@ -207,7 +220,7 @@ export async function sendMessage(
 
     const DHs = x25519KeyPair();
 
-    const session = {
+    session = {
       peer: to,
       RK: SK,
       DHs_priv: DHs.privateKey,
@@ -227,31 +240,37 @@ export async function sendMessage(
 
     await db.sessions.put(session);
 
-    return new websocket.Forward({
-      handle: to,
-      pqxdh_init: new websocket.PQXDHInit({
-        id_key: identity.pub,
-        ephemeral_key: EK.publicKey,
-        pqkem_ciphertext: CT,
-        prekey_ids: [
-          bundle.prekey.id,
-          bundle.pqkem_prekey.id,
-          ...(bundle.has_one_time_prekey ? [bundle.one_time_prekey.id] : [])
-        ],
-        initial_message: new websocket.EncryptedMessage({
-          header,
-          ciphertext,
-          nonce
+    return {
+      forward: new websocket.Forward({
+        handle: to,
+        pqxdh_init: new websocket.PQXDHInit({
+          id_key: identity.pub,
+          ephemeral_key: EK.publicKey,
+          pqkem_ciphertext: CT,
+          prekey_ids: [
+            bundle.prekey.id,
+            bundle.pqkem_prekey.id,
+            ...(bundle.has_one_time_prekey ? [bundle.one_time_prekey.id] : [])
+          ],
+          initial_message: new websocket.EncryptedMessage({
+            header,
+            ciphertext,
+            nonce
+          })
         })
-      })
-    });
+      }),
+      session
+    };
   } else {
     const AD = encoder.encode(identity.handle + to);
-    const { header, ciphertext, nonce } = await encrypt(session, payload.serialize(), AD);
-    return new websocket.Forward({
-      handle: to,
-      message: new websocket.EncryptedMessage({ header, ciphertext, nonce })
-    });
+    const encrypted = await encrypt(session, payload.serialize(), AD);
+    return {
+      forward: new websocket.Forward({
+        handle: to,
+        message: new websocket.EncryptedMessage(encrypted)
+      }),
+      session
+    };
   }
 }
 
@@ -323,40 +342,15 @@ export async function recvMessage(pb: websocket.Forward) {
 
     await db.sessions.put(session);
 
-    return messages.MessagePayload.deserialize(plaintext);
+    return { payload: secret.Payload.deserialize(plaintext), session };
   } else if (pb.payload === 'message') {
     const session = await db.sessions.where({ peer: pb.handle }).first();
     if (!session) throw new Error('No session');
     const msg = pb.message;
     const AD = encoder.encode(pb.handle + identity.handle);
     const plaintext = await decrypt(session, msg.header, msg.ciphertext, msg.nonce, AD);
-    return messages.MessagePayload.deserialize(plaintext);
+    return { payload: secret.Payload.deserialize(plaintext), session };
   } else {
     throw new Error('unknown payload');
   }
-}
-
-async function getLocalKey() {
-  const identity = await db.identity.limit(1).first();
-  if (!identity) throw new Error('No identity found');
-  return hkdf(sha256, identity.priv, new Uint8Array(0), new TextEncoder().encode('me.averi.chat_LocalEncryption'), 32);
-}
-
-export async function encryptLocal(plaintext: Uint8Array): Promise<{ ciphertext: Uint8Array; nonce: Uint8Array }> {
-  const key = await getLocalKey();
-  const nonce = randomBytes(24);
-
-  await sodium.ready;
-  const ciphertext = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(plaintext, null, null, nonce, key);
-
-  return { ciphertext, nonce };
-}
-
-export async function decryptLocal(ciphertext: Uint8Array, nonce: Uint8Array): Promise<Uint8Array> {
-  const key = await getLocalKey();
-
-  await sodium.ready;
-  const plaintext = sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(null, ciphertext, null, nonce, key);
-
-  return plaintext;
 }

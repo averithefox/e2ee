@@ -1,6 +1,4 @@
-import type { messages } from 'generated/messages';
 import { X } from 'lucide-react';
-import type { Result } from 'neverthrow';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { fetchKeyBundle } from '~/lib/api';
 import { db } from '~/lib/db';
@@ -18,21 +16,21 @@ export function NewConversationModal({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  onStart: (handle: string, keyBundle: messages.PQXDHKeyBundle) => void;
+  onStart: (handle: string, idKey: Uint8Array) => void;
 }) {
   const [recipientHandle, setRecipientHandle] = useState('');
-  const [keyBundle, setKeyBundle] = useState<messages.PQXDHKeyBundle | null>(null);
+  const [idKey, setIdKey] = useState<Uint8Array | null>(null);
   const [storedIdKey, setStoredIdKey] = useState<Uint8Array | null>(null);
-  const [lookupStatus, setLookupStatus] = useState<'idle' | 'loading' | 'found' | 'not_found' | 'invalid_signature' | 'invalid_handle'>(
-    'idle'
-  );
+  const [lookupStatus, setLookupStatus] = useState<
+    'idle' | 'loading' | 'found' | 'not_found' | 'invalid_signature' | 'invalid_handle'
+  >('idle');
   const [handleError, setHandleError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  const keyBundleCache = useRef(new Map<string, Result<messages.PQXDHKeyBundle, number>>());
+  const inputRef = useRef<HTMLInputElement>(null);
+  const cache = useRef(new Map<string, Awaited<ReturnType<typeof fetchKeyBundle>>>());
 
   function resetKeyState() {
-    setKeyBundle(null);
+    setIdKey(null);
     setStoredIdKey(null);
   }
 
@@ -78,10 +76,10 @@ export function NewConversationModal({
 
     (async () => {
       try {
-        let res = keyBundleCache.current.get(handle);
+        let res = cache.current.get(handle);
         if (!res) {
-          res = await fetchKeyBundle(handle, { signal: controller.signal });
-          keyBundleCache.current.set(handle, res);
+          res = await fetchKeyBundle(handle, { signal: controller.signal }, true);
+          cache.current.set(handle, res);
         }
 
         if (res.isErr()) {
@@ -90,19 +88,14 @@ export function NewConversationModal({
           return;
         }
 
-        if (!verifyKeyBundle(res.value)) {
-          resetKeyState();
-          setLookupStatus('invalid_signature');
-          return;
-        }
-
         const storedIdKey = await db.identity_keys.get(handle);
         setStoredIdKey(storedIdKey?.pub ?? null);
 
-        setKeyBundle(res.value);
+        setIdKey(res.value.id_key);
         setLookupStatus('found');
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
+          console.error(err);
           resetKeyState();
           setLookupStatus('idle');
         }
@@ -117,10 +110,10 @@ export function NewConversationModal({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const h = recipientHandle.trim();
-    if (h && keyBundle && lookupStatus === 'found') {
-      await db.identity_keys.put({ for: h, pub: keyBundle.id_key }, h);
-      onStart(h, keyBundle);
-      keyBundleCache.current.delete(h);
+    if (h && idKey && lookupStatus === 'found') {
+      await db.identity_keys.put({ for: h, pub: idKey }, h);
+      onStart(h, idKey);
+      cache.current.delete(h);
     }
   }
 
@@ -159,7 +152,7 @@ export function NewConversationModal({
                     invalid_signature: <div className="text-xs text-red-600 dark:text-red-400">Invalid signature</div>,
                     invalid_handle: <div className="text-xs text-red-600 dark:text-red-400">{handleError}</div>,
                     idle: null,
-                    found: keyBundle && (
+                    found: idKey && (
                       <div className="space-y-1">
                         <div className="text-[10px] font-medium tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
                           Identity Key Fingerprint
@@ -167,12 +160,12 @@ export function NewConversationModal({
                         <p
                           className={cn(
                             'font-mono text-xs leading-relaxed break-all',
-                            !storedIdKey || eq(keyBundle.id_key, storedIdKey)
+                            !storedIdKey || eq(idKey, storedIdKey)
                               ? 'text-indigo-600 dark:text-indigo-400'
                               : 'text-red-600 dark:text-red-400'
                           )}
                         >
-                          {formatFingerprint(keyBundle.id_key)}
+                          {formatFingerprint(idKey)}
                         </p>
                       </div>
                     )
@@ -180,7 +173,7 @@ export function NewConversationModal({
                 }
               </div>
 
-              {keyBundle && storedIdKey && !eq(keyBundle.id_key, storedIdKey) && (
+              {idKey && storedIdKey && !eq(idKey, storedIdKey) && (
                 <div className="w-full space-y-2 bg-red-600 p-2 text-sm text-white dark:bg-red-400">
                   <p>
                     The identity key provided by the server does not match {recipientHandle}'

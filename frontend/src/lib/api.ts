@@ -110,9 +110,10 @@ export async function registerIdentity(handle: string) {
 
 export async function fetchKeyBundle(
   handle: string,
-  requestInit?: LimitedRequestInit
+  requestInit?: LimitedRequestInit,
+  dryRun?: boolean
 ): Promise<Result<messages.PQXDHKeyBundle, number>> {
-  const res = await fetch(`${API_BASE_URL}/api/keys/${handle}/bundle`, requestInit);
+  const res = await fetch(`${API_BASE_URL}/api/keys/${handle}/bundle${dryRun ? '?dryRun=1' : ''}`, requestInit);
   if (!res.ok) return err(res.status);
   const buf = await res.arrayBuffer();
   return ok(messages.PQXDHKeyBundle.deserialize(new Uint8Array(buf)));

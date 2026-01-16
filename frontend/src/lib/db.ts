@@ -40,12 +40,24 @@ export interface SkippedMessageKeys {
   value: Uint8Array;
 }
 
-export interface StoredMessage {
+export interface Message {
   id: number;
   peer: string;
   sender: string;
-  ciphertext: Uint8Array;
-  nonce: Uint8Array;
+  text: string | null;
+  reply_to: Message['id'] | null;
+  timestamp: number;
+  last_edited_at: number | null;
+  // "pending" at first, "sent" after receiving ack from the server, "delivered" after receiving appropriate ack from the peer
+  status: 'pending' | 'sent' | 'delivered' | 'seen';
+}
+
+export interface Attachment {
+  id: number;
+  sender: string;
+  message_id: Message['id'];
+  mime_type: string;
+  data: Uint8Array;
 }
 
 export const db = new Dexie('theDb') as Dexie & {
@@ -56,7 +68,8 @@ export const db = new Dexie('theDb') as Dexie & {
   one_time_prekeys: EntityTable<Key, 'id'>;
   sessions: EntityTable<Session, 'id'>;
   skipped_message_keys: EntityTable<SkippedMessageKeys, 'id'>;
-  messages: EntityTable<StoredMessage, 'id'>;
+  messages: EntityTable<Message>;
+  attachments: EntityTable<Attachment>;
 };
 
 db.version(1).stores({
@@ -67,7 +80,8 @@ db.version(1).stores({
   one_time_prekeys: '++id',
   sessions: '++id,peer',
   skipped_message_keys: '++id,[session_id+dh_public_key+message_number]',
-  messages: '++id,peer,sender'
+  messages: '++,&[id+peer],[id+sender],[id+peer+sender],id,peer,sender,reply_to',
+  attachments: '++,&[id+sender+message_id],[sender+message_id],id,sender,message_id'
 });
 
 if (process.env.NODE_ENV === 'development') {

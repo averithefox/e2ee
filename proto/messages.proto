@@ -17,9 +17,9 @@ message SignedPrekey {
 
 message PQXDHKeyBundle {
   required bytes id_key = 1;
-  required SignedPrekey prekey = 2;
-  required SignedPrekey pqkem_prekey = 3;
-  optional Prekey one_time_prekey = 4;
+  optional SignedPrekey prekey = 2; // always null on dry run
+  optional SignedPrekey pqkem_prekey = 3; // always null on dry run
+  optional Prekey one_time_prekey = 4; // always null on dry run
 }
 
 message Identity {
@@ -38,24 +38,4 @@ message IdentityPatch {
   optional SignedPrekey pqkem_prekey = 3;
   repeated SignedPrekey one_time_pqkem_prekeys = 4;
   repeated Prekey one_time_prekeys = 5;
-}
-
-message MessagePayload {
-  message Attachment {
-    required string mime_type = 1;
-    required bytes data = 2;
-  }
-
-  required bytes uuid = 1;
-  optional string text = 2;
-  repeated Attachment attachments = 3;
-  optional bytes reply_to = 4;
-  required int64 timestamp = 5;
-  optional int64 edited_at = 8;  // Local-only: timestamp when message was last edited
-
-  // Sync operations - when set, this payload is a sync instruction rather than a new message
-  oneof sync {
-    bytes edit_target = 6;    // UUID of message to edit (text field contains new content)
-    bytes delete_target = 7;  // UUID of message to delete
-  }
 }

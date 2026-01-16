@@ -22,7 +22,7 @@ void handle_prekey_bundle_request(struct mg_connection *c,
                                   struct mg_http_message *hm,
                                   struct mg_str *handle) {
   int status_code = 418;
-  sqlite3_stmt *stmt0 = NULL, *stmt1 = NULL, *stmt2 = NULL;
+  sqlite3_stmt *stmt_identity = NULL, *stmt_pqopk = NULL, *stmt_opk = NULL;
   void *pb_buf = NULL;
   size_t pb_len = 0;
 
@@ -31,8 +31,11 @@ void handle_prekey_bundle_request(struct mg_connection *c,
   int64_t _id = verify_request(hm, NULL);
   if (_id < 0) ERR(-_id);
 
+  bool is_dry_run =
+      mg_strcmp(mg_http_var(hm->query, mg_str("dryRun")), mg_str("1")) == 0;
+
   // clang-format off
-  const char *sql0 =
+  const char *sql_identity =
     "select "
       "id,"
       "ik,"
@@ -43,105 +46,119 @@ void handle_prekey_bundle_request(struct mg_connection *c,
       "pqspk_id,"
       "pqspk_sig "
     "from identities where handle = ?;";
-  const char *sql1 = "select uid,bytes,id,sig from pqopks where `for` = ? order by uid asc limit 1;";
-  const char *sql2 = "select uid,bytes,id from opks where `for` = ? order by uid asc limit 1;";
+  const char *sql_pqopk = "select uid,bytes,id,sig from pqopks where `for` = ? order by uid asc limit 1;";
+  const char *sql_opk = "select uid,bytes,id from opks where `for` = ? order by uid asc limit 1;";
   // clang-format on
 
-  if (sqlite3_prepare_v3(db, sql0, -1, 0, &stmt0, NULL) != SQLITE_OK) {
-  prepare_fail:
-    fprintf(stderr, "[%s:%d] prepare failed: %s\n", __func__, __LINE__,
+  int rc;
+  if ((rc = sqlite3_prepare_v3(db, sql_identity, -1, 0, &stmt_identity,
+                               NULL)) != SQLITE_OK) {
+    fprintf(stderr, "[%s:%d] prepare failed: %d (%s)\n", __func__, __LINE__, rc,
             sqlite3_errmsg(db));
     ERR(500);
   }
 
-  if (sqlite3_bind_text(stmt0, 1, handle->buf, handle->len, SQLITE_STATIC) <
-      0) {
-  bind_fail:
-    fprintf(stderr, "[%s:%d] bind failed: %s\n", __func__, __LINE__,
+  if ((rc = sqlite3_bind_text(stmt_identity, 1, handle->buf, handle->len,
+                              SQLITE_STATIC)) < 0) {
+    fprintf(stderr, "[%s:%d] bind failed: %d (%s)\n", __func__, __LINE__, rc,
             sqlite3_errmsg(db));
     ERR(500);
   }
 
-  switch (sqlite3_step(stmt0)) {
+  switch (rc = sqlite3_step(stmt_identity)) {
     case SQLITE_ROW:
       break;
     case SQLITE_DONE:
       ERR(404);
     default: {
-    step_fail:
-      fprintf(stderr, "[%s:%d] step failed: %s\n", __func__, __LINE__,
+      fprintf(stderr, "[%s:%d] step failed: %d (%s)\n", __func__, __LINE__, rc,
               sqlite3_errmsg(db));
       ERR(500);
     }
   }
-
-  int64_t id = sqlite3_column_int64(stmt0, 0);
-
-  if (sqlite3_prepare_v3(db, sql1, -1, 0, &stmt1, NULL) != SQLITE_OK ||
-      sqlite3_prepare_v3(db, sql2, -1, 0, &stmt2, NULL) != SQLITE_OK)
-    goto prepare_fail;
-
-  if (sqlite3_bind_int64(stmt1, 1, id) != SQLITE_OK ||
-      sqlite3_bind_int64(stmt2, 1, id) != SQLITE_OK)
-    goto bind_fail;
 
   Messages__PQXDHKeyBundle pb = MESSAGES__PQXDHKEY_BUNDLE__INIT;
   Messages__SignedPrekey spk = MESSAGES__SIGNED_PREKEY__INIT;
   Messages__SignedPrekey pqpk = MESSAGES__SIGNED_PREKEY__INIT;
   Messages__Prekey opk = MESSAGES__PREKEY__INIT;
 
-  pb.prekey = &spk;
-  pb.pqkem_prekey = &pqpk;
-
-  pb.id_key.data = (uint8_t *)sqlite3_column_blob(stmt0, 1);
-  pb.id_key.len = sqlite3_column_bytes(stmt0, 1);
-
-  spk.key.data = (uint8_t *)sqlite3_column_blob(stmt0, 2);
-  spk.key.len = sqlite3_column_bytes(stmt0, 2);
-  spk.id = sqlite3_column_int64(stmt0, 3);
-  spk.sig.data = (uint8_t *)sqlite3_column_blob(stmt0, 4);
-  spk.sig.len = sqlite3_column_bytes(stmt0, 4);
+  pb.id_key.data = (uint8_t *)sqlite3_column_blob(stmt_identity, 1);
+  pb.id_key.len = sqlite3_column_bytes(stmt_identity, 1);
 
   int64_t pqopk_id = -1, opk_id = -1;
 
-  switch (sqlite3_step(stmt1)) {
-    case SQLITE_ROW: {
-      // got a signed one-time pqkem prekey
-      pqopk_id = sqlite3_column_int64(stmt1, 0);
-      pqpk.key.data = (uint8_t *)sqlite3_column_blob(stmt1, 1);
-      pqpk.key.len = sqlite3_column_bytes(stmt1, 1);
-      pqpk.id = sqlite3_column_int64(stmt1, 2);
-      pqpk.sig.data = (uint8_t *)sqlite3_column_blob(stmt1, 3);
-      pqpk.sig.len = sqlite3_column_bytes(stmt1, 3);
-      break;
-    }
-    case SQLITE_DONE: {
-      // ran out of signed one-time pqkem prekeys
-      pqpk.key.data = (uint8_t *)sqlite3_column_blob(stmt0, 5);
-      pqpk.key.len = sqlite3_column_bytes(stmt0, 5);
-      pqpk.id = sqlite3_column_int64(stmt0, 6);
-      pqpk.sig.data = (uint8_t *)sqlite3_column_blob(stmt0, 7);
-      pqpk.sig.len = sqlite3_column_bytes(stmt0, 7);
-      break;
-    }
-    default:
-      goto step_fail;
-  }
+  if (!is_dry_run) {
+    int64_t id = sqlite3_column_int64(stmt_identity, 0);
 
-  switch (sqlite3_step(stmt2)) {
-    case SQLITE_ROW: {
-      // got a one-time curve prekey
-      opk_id = sqlite3_column_int64(stmt2, 0);
-      pb.one_time_prekey = &opk;
-      opk.key.data = (uint8_t *)sqlite3_column_blob(stmt2, 1);
-      opk.key.len = sqlite3_column_bytes(stmt2, 1);
-      opk.id = sqlite3_column_int64(stmt2, 2);
-      break;
+    if ((rc = sqlite3_prepare_v3(db, sql_pqopk, -1, 0, &stmt_pqopk, NULL)) !=
+            SQLITE_OK ||
+        (rc = sqlite3_prepare_v3(db, sql_opk, -1, 0, &stmt_opk, NULL)) !=
+            SQLITE_OK) {
+      fprintf(stderr, "[%s:%d] prepare failed: %d (%s)\n", __func__, __LINE__,
+              rc, sqlite3_errmsg(db));
+      ERR(500);
     }
-    case SQLITE_DONE:
-      break;
-    default:
-      goto step_fail;
+
+    if ((rc = sqlite3_bind_int64(stmt_pqopk, 1, id)) != SQLITE_OK ||
+        (rc = sqlite3_bind_int64(stmt_opk, 1, id)) != SQLITE_OK) {
+      fprintf(stderr, "[%s:%d] bind failed: %d (%s)\n", __func__, __LINE__, rc,
+              sqlite3_errmsg(db));
+      ERR(500);
+    }
+
+    pb.prekey = &spk;
+    spk.key.data = (uint8_t *)sqlite3_column_blob(stmt_identity, 2);
+    spk.key.len = sqlite3_column_bytes(stmt_identity, 2);
+    spk.id = sqlite3_column_int64(stmt_identity, 3);
+    spk.sig.data = (uint8_t *)sqlite3_column_blob(stmt_identity, 4);
+    spk.sig.len = sqlite3_column_bytes(stmt_identity, 4);
+
+    pb.pqkem_prekey = &pqpk;
+    switch (rc = sqlite3_step(stmt_pqopk)) {
+      case SQLITE_ROW: {
+        // got a signed one-time pqkem prekey
+        pqopk_id = sqlite3_column_int64(stmt_pqopk, 0);
+        pqpk.key.data = (uint8_t *)sqlite3_column_blob(stmt_pqopk, 1);
+        pqpk.key.len = sqlite3_column_bytes(stmt_pqopk, 1);
+        pqpk.id = sqlite3_column_int64(stmt_pqopk, 2);
+        pqpk.sig.data = (uint8_t *)sqlite3_column_blob(stmt_pqopk, 3);
+        pqpk.sig.len = sqlite3_column_bytes(stmt_pqopk, 3);
+        break;
+      }
+      case SQLITE_DONE: {
+        // ran out of signed one-time pqkem prekeys
+        pqpk.key.data = (uint8_t *)sqlite3_column_blob(stmt_identity, 5);
+        pqpk.key.len = sqlite3_column_bytes(stmt_identity, 5);
+        pqpk.id = sqlite3_column_int64(stmt_identity, 6);
+        pqpk.sig.data = (uint8_t *)sqlite3_column_blob(stmt_identity, 7);
+        pqpk.sig.len = sqlite3_column_bytes(stmt_identity, 7);
+        break;
+      }
+      default: {
+        fprintf(stderr, "[%s:%d] step failed: %d (%s)\n", __func__, __LINE__,
+                rc, sqlite3_errmsg(db));
+        ERR(500);
+      }
+    }
+
+    switch (rc = sqlite3_step(stmt_opk)) {
+      case SQLITE_ROW: {
+        // got a one-time curve prekey
+        opk_id = sqlite3_column_int64(stmt_opk, 0);
+        pb.one_time_prekey = &opk;
+        opk.key.data = (uint8_t *)sqlite3_column_blob(stmt_opk, 1);
+        opk.key.len = sqlite3_column_bytes(stmt_opk, 1);
+        opk.id = sqlite3_column_int64(stmt_opk, 2);
+        break;
+      }
+      case SQLITE_DONE:
+        break;
+      default: {
+        fprintf(stderr, "[%s:%d] step failed: %d (%s)\n", __func__, __LINE__,
+                rc, sqlite3_errmsg(db));
+        ERR(500);
+      }
+    }
   }
 
   pb_len = messages__pqxdhkey_bundle__get_packed_size(&pb);
@@ -163,26 +180,26 @@ void handle_prekey_bundle_request(struct mg_connection *c,
   mg_send(c, pb_buf, pb_len);
   c->is_resp = 0;
 
-  if (stmt0) sqlite3_finalize(stmt0);
-  if (stmt1) sqlite3_finalize(stmt1);
-  if (stmt2) sqlite3_finalize(stmt2);
+  if (stmt_identity) sqlite3_finalize(stmt_identity);
+  if (stmt_pqopk) sqlite3_finalize(stmt_pqopk);
+  if (stmt_opk) sqlite3_finalize(stmt_opk);
 
   if (pqopk_id != -1) {
     sqlite3_stmt *stmt = NULL;
     const char *sql = "delete from pqopks where uid = ?;";
-    if (sqlite3_prepare_v3(db, sql, -1, 0, &stmt, NULL) >= 0) {
-      if (sqlite3_bind_int64(stmt, 1, pqopk_id) >= 0) {
-        if (sqlite3_step(stmt) != SQLITE_DONE) {
-          fprintf(stderr, "[%s:%d] step failed: %s\n", __func__, __LINE__,
-                  sqlite3_errmsg(db));
+    if ((rc = sqlite3_prepare_v3(db, sql, -1, 0, &stmt, NULL)) != SQLITE_OK) {
+      if ((rc = sqlite3_bind_int64(stmt, 1, pqopk_id)) != SQLITE_OK) {
+        if ((rc = sqlite3_step(stmt)) != SQLITE_DONE) {
+          fprintf(stderr, "[%s:%d] step failed: %d (%s)\n", __func__, __LINE__,
+                  rc, sqlite3_errmsg(db));
         }
       } else {
-        fprintf(stderr, "[%s:%d] bind failed: %s\n", __func__, __LINE__,
-                sqlite3_errmsg(db));
+        fprintf(stderr, "[%s:%d] bind failed: %d (%s)\n", __func__, __LINE__,
+                rc, sqlite3_errmsg(db));
       }
     } else {
-      fprintf(stderr, "[%s:%d] prepare failed: %s\n", __func__, __LINE__,
-              sqlite3_errmsg(db));
+      fprintf(stderr, "[%s:%d] prepare failed: %d (%s)\n", __func__, __LINE__,
+              rc, sqlite3_errmsg(db));
     }
     if (stmt) sqlite3_finalize(stmt);
   }
@@ -190,28 +207,28 @@ void handle_prekey_bundle_request(struct mg_connection *c,
   if (opk_id != -1) {
     sqlite3_stmt *stmt = NULL;
     const char *sql = "delete from opks where uid = ?;";
-    if (sqlite3_prepare_v3(db, sql, -1, 0, &stmt, NULL) >= 0) {
-      if (sqlite3_bind_int64(stmt, 1, opk_id) >= 0) {
-        if (sqlite3_step(stmt) != SQLITE_DONE) {
-          fprintf(stderr, "[%s:%d] step failed: %s\n", __func__, __LINE__,
-                  sqlite3_errmsg(db));
+    if ((rc = sqlite3_prepare_v3(db, sql, -1, 0, &stmt, NULL)) != SQLITE_OK) {
+      if ((rc = sqlite3_bind_int64(stmt, 1, opk_id)) != SQLITE_OK) {
+        if ((rc = sqlite3_step(stmt)) != SQLITE_DONE) {
+          fprintf(stderr, "[%s:%d] step failed: %d (%s)\n", __func__, __LINE__,
+                  rc, sqlite3_errmsg(db));
         }
       } else {
-        fprintf(stderr, "[%s:%d] bind failed: %s\n", __func__, __LINE__,
-                sqlite3_errmsg(db));
+        fprintf(stderr, "[%s:%d] bind failed: %d (%s)\n", __func__, __LINE__,
+                rc, sqlite3_errmsg(db));
       }
     } else {
-      fprintf(stderr, "[%s:%d] prepare failed: %s\n", __func__, __LINE__,
-              sqlite3_errmsg(db));
+      fprintf(stderr, "[%s:%d] prepare failed: %d (%s)\n", __func__, __LINE__,
+              rc, sqlite3_errmsg(db));
     }
     if (stmt) sqlite3_finalize(stmt);
   }
 
   goto end;
 err:
-  if (stmt0) sqlite3_finalize(stmt0);
-  if (stmt1) sqlite3_finalize(stmt1);
-  if (stmt2) sqlite3_finalize(stmt2);
+  if (stmt_identity) sqlite3_finalize(stmt_identity);
+  if (stmt_pqopk) sqlite3_finalize(stmt_pqopk);
+  if (stmt_opk) sqlite3_finalize(stmt_opk);
   mg_http_reply(c, status_code, PREKEY_BUNDLE_REPLY_HEADERS, "");
 end:
   if (pb_buf) free(pb_buf);

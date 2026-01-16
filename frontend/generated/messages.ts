@@ -209,16 +209,20 @@ export namespace messages {
         #one_of_decls: number[][] = [];
         constructor(data?: any[] | {
             id_key: Uint8Array;
-            prekey: SignedPrekey;
-            pqkem_prekey: SignedPrekey;
+            prekey?: SignedPrekey;
+            pqkem_prekey?: SignedPrekey;
             one_time_prekey?: Prekey;
         }) {
             super();
             pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
             if (!Array.isArray(data) && typeof data == "object") {
                 this.id_key = data.id_key;
-                this.prekey = data.prekey;
-                this.pqkem_prekey = data.pqkem_prekey;
+                if ("prekey" in data && data.prekey != undefined) {
+                    this.prekey = data.prekey;
+                }
+                if ("pqkem_prekey" in data && data.pqkem_prekey != undefined) {
+                    this.pqkem_prekey = data.pqkem_prekey;
+                }
                 if ("one_time_prekey" in data && data.one_time_prekey != undefined) {
                     this.one_time_prekey = data.one_time_prekey;
                 }
@@ -267,10 +271,14 @@ export namespace messages {
             one_time_prekey?: ReturnType<typeof Prekey.prototype.toObject>;
         }): PQXDHKeyBundle {
             const message = new PQXDHKeyBundle({
-                id_key: data.id_key,
-                prekey: SignedPrekey.fromObject(data.prekey),
-                pqkem_prekey: SignedPrekey.fromObject(data.pqkem_prekey)
+                id_key: data.id_key
             });
+            if (data.prekey != null) {
+                message.prekey = SignedPrekey.fromObject(data.prekey);
+            }
+            if (data.pqkem_prekey != null) {
+                message.pqkem_prekey = SignedPrekey.fromObject(data.pqkem_prekey);
+            }
             if (data.one_time_prekey != null) {
                 message.one_time_prekey = Prekey.fromObject(data.one_time_prekey);
             }
@@ -646,349 +654,6 @@ export namespace messages {
         }
         static deserializeBinary(bytes: Uint8Array): IdentityPatch {
             return IdentityPatch.deserialize(bytes);
-        }
-    }
-    export class MessagePayload extends pb_1.Message {
-        #one_of_decls: number[][] = [[6, 7]];
-        constructor(data?: any[] | ({
-            uuid: Uint8Array;
-            text?: string;
-            attachments: MessagePayload.Attachment[];
-            reply_to?: Uint8Array;
-            timestamp: number;
-            edited_at?: number;
-        } & (({
-            edit_target?: Uint8Array;
-            delete_target?: never;
-        } | {
-            edit_target?: never;
-            delete_target?: Uint8Array;
-        })))) {
-            super();
-            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [3], this.#one_of_decls);
-            if (!Array.isArray(data) && typeof data == "object") {
-                this.uuid = data.uuid;
-                if ("text" in data && data.text != undefined) {
-                    this.text = data.text;
-                }
-                this.attachments = data.attachments;
-                if ("reply_to" in data && data.reply_to != undefined) {
-                    this.reply_to = data.reply_to;
-                }
-                this.timestamp = data.timestamp;
-                if ("edited_at" in data && data.edited_at != undefined) {
-                    this.edited_at = data.edited_at;
-                }
-                if ("edit_target" in data && data.edit_target != undefined) {
-                    this.edit_target = data.edit_target;
-                }
-                if ("delete_target" in data && data.delete_target != undefined) {
-                    this.delete_target = data.delete_target;
-                }
-            }
-        }
-        get uuid() {
-            return pb_1.Message.getField(this, 1) as Uint8Array;
-        }
-        set uuid(value: Uint8Array) {
-            pb_1.Message.setField(this, 1, value);
-        }
-        get has_uuid() {
-            return pb_1.Message.getField(this, 1) != null;
-        }
-        get text() {
-            return pb_1.Message.getFieldWithDefault(this, 2, "") as string;
-        }
-        set text(value: string) {
-            pb_1.Message.setField(this, 2, value);
-        }
-        get has_text() {
-            return pb_1.Message.getField(this, 2) != null;
-        }
-        get attachments() {
-            return pb_1.Message.getRepeatedWrapperField(this, MessagePayload.Attachment, 3) as MessagePayload.Attachment[];
-        }
-        set attachments(value: MessagePayload.Attachment[]) {
-            pb_1.Message.setRepeatedWrapperField(this, 3, value);
-        }
-        get reply_to() {
-            return pb_1.Message.getFieldWithDefault(this, 4, new Uint8Array(0)) as Uint8Array;
-        }
-        set reply_to(value: Uint8Array) {
-            pb_1.Message.setField(this, 4, value);
-        }
-        get has_reply_to() {
-            return pb_1.Message.getField(this, 4) != null;
-        }
-        get timestamp() {
-            return pb_1.Message.getField(this, 5) as number;
-        }
-        set timestamp(value: number) {
-            pb_1.Message.setField(this, 5, value);
-        }
-        get has_timestamp() {
-            return pb_1.Message.getField(this, 5) != null;
-        }
-        get edited_at() {
-            return pb_1.Message.getFieldWithDefault(this, 8, 0) as number;
-        }
-        set edited_at(value: number) {
-            pb_1.Message.setField(this, 8, value);
-        }
-        get has_edited_at() {
-            return pb_1.Message.getField(this, 8) != null;
-        }
-        get edit_target() {
-            return pb_1.Message.getFieldWithDefault(this, 6, new Uint8Array(0)) as Uint8Array;
-        }
-        set edit_target(value: Uint8Array) {
-            pb_1.Message.setOneofField(this, 6, this.#one_of_decls[0], value);
-        }
-        get has_edit_target() {
-            return pb_1.Message.getField(this, 6) != null;
-        }
-        get delete_target() {
-            return pb_1.Message.getFieldWithDefault(this, 7, new Uint8Array(0)) as Uint8Array;
-        }
-        set delete_target(value: Uint8Array) {
-            pb_1.Message.setOneofField(this, 7, this.#one_of_decls[0], value);
-        }
-        get has_delete_target() {
-            return pb_1.Message.getField(this, 7) != null;
-        }
-        get sync() {
-            const cases: {
-                [index: number]: "none" | "edit_target" | "delete_target";
-            } = {
-                0: "none",
-                6: "edit_target",
-                7: "delete_target"
-            };
-            return cases[pb_1.Message.computeOneofCase(this, [6, 7])];
-        }
-        static fromObject(data: {
-            uuid?: Uint8Array;
-            text?: string;
-            attachments?: ReturnType<typeof MessagePayload.Attachment.prototype.toObject>[];
-            reply_to?: Uint8Array;
-            timestamp?: number;
-            edited_at?: number;
-            edit_target?: Uint8Array;
-            delete_target?: Uint8Array;
-        }): MessagePayload {
-            const message = new MessagePayload({
-                uuid: data.uuid,
-                attachments: data.attachments.map(item => MessagePayload.Attachment.fromObject(item)),
-                timestamp: data.timestamp
-            });
-            if (data.text != null) {
-                message.text = data.text;
-            }
-            if (data.reply_to != null) {
-                message.reply_to = data.reply_to;
-            }
-            if (data.edited_at != null) {
-                message.edited_at = data.edited_at;
-            }
-            if (data.edit_target != null) {
-                message.edit_target = data.edit_target;
-            }
-            if (data.delete_target != null) {
-                message.delete_target = data.delete_target;
-            }
-            return message;
-        }
-        toObject() {
-            const data: {
-                uuid?: Uint8Array;
-                text?: string;
-                attachments?: ReturnType<typeof MessagePayload.Attachment.prototype.toObject>[];
-                reply_to?: Uint8Array;
-                timestamp?: number;
-                edited_at?: number;
-                edit_target?: Uint8Array;
-                delete_target?: Uint8Array;
-            } = {};
-            if (this.uuid != null) {
-                data.uuid = this.uuid;
-            }
-            if (this.text != null) {
-                data.text = this.text;
-            }
-            if (this.attachments != null) {
-                data.attachments = this.attachments.map((item: MessagePayload.Attachment) => item.toObject());
-            }
-            if (this.reply_to != null) {
-                data.reply_to = this.reply_to;
-            }
-            if (this.timestamp != null) {
-                data.timestamp = this.timestamp;
-            }
-            if (this.edited_at != null) {
-                data.edited_at = this.edited_at;
-            }
-            if (this.edit_target != null) {
-                data.edit_target = this.edit_target;
-            }
-            if (this.delete_target != null) {
-                data.delete_target = this.delete_target;
-            }
-            return data;
-        }
-        serialize(): Uint8Array;
-        serialize(w: pb_1.BinaryWriter): void;
-        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
-            const writer = w || new pb_1.BinaryWriter();
-            if (this.has_uuid && this.uuid.length)
-                writer.writeBytes(1, this.uuid);
-            if (this.has_text && this.text.length)
-                writer.writeString(2, this.text);
-            if (this.attachments.length)
-                writer.writeRepeatedMessage(3, this.attachments, (item: MessagePayload.Attachment) => item.serialize(writer));
-            if (this.has_reply_to && this.reply_to.length)
-                writer.writeBytes(4, this.reply_to);
-            if (this.has_timestamp)
-                writer.writeInt64(5, this.timestamp);
-            if (this.has_edited_at)
-                writer.writeInt64(8, this.edited_at);
-            if (this.has_edit_target)
-                writer.writeBytes(6, this.edit_target);
-            if (this.has_delete_target)
-                writer.writeBytes(7, this.delete_target);
-            if (!w)
-                return writer.getResultBuffer();
-        }
-        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): MessagePayload {
-            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new MessagePayload();
-            while (reader.nextField()) {
-                if (reader.isEndGroup())
-                    break;
-                switch (reader.getFieldNumber()) {
-                    case 1:
-                        message.uuid = reader.readBytes();
-                        break;
-                    case 2:
-                        message.text = reader.readString();
-                        break;
-                    case 3:
-                        reader.readMessage(message.attachments, () => pb_1.Message.addToRepeatedWrapperField(message, 3, MessagePayload.Attachment.deserialize(reader), MessagePayload.Attachment));
-                        break;
-                    case 4:
-                        message.reply_to = reader.readBytes();
-                        break;
-                    case 5:
-                        message.timestamp = reader.readInt64();
-                        break;
-                    case 8:
-                        message.edited_at = reader.readInt64();
-                        break;
-                    case 6:
-                        message.edit_target = reader.readBytes();
-                        break;
-                    case 7:
-                        message.delete_target = reader.readBytes();
-                        break;
-                    default: reader.skipField();
-                }
-            }
-            return message;
-        }
-        serializeBinary(): Uint8Array {
-            return this.serialize();
-        }
-        static deserializeBinary(bytes: Uint8Array): MessagePayload {
-            return MessagePayload.deserialize(bytes);
-        }
-    }
-    export namespace MessagePayload {
-        export class Attachment extends pb_1.Message {
-            #one_of_decls: number[][] = [];
-            constructor(data?: any[] | {
-                mime_type: string;
-                data: Uint8Array;
-            }) {
-                super();
-                pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
-                if (!Array.isArray(data) && typeof data == "object") {
-                    this.mime_type = data.mime_type;
-                    this.data = data.data;
-                }
-            }
-            get mime_type() {
-                return pb_1.Message.getField(this, 1) as string;
-            }
-            set mime_type(value: string) {
-                pb_1.Message.setField(this, 1, value);
-            }
-            get has_mime_type() {
-                return pb_1.Message.getField(this, 1) != null;
-            }
-            get data() {
-                return pb_1.Message.getField(this, 2) as Uint8Array;
-            }
-            set data(value: Uint8Array) {
-                pb_1.Message.setField(this, 2, value);
-            }
-            get has_data() {
-                return pb_1.Message.getField(this, 2) != null;
-            }
-            static fromObject(data: {
-                mime_type?: string;
-                data?: Uint8Array;
-            }): Attachment {
-                const message = new Attachment({
-                    mime_type: data.mime_type,
-                    data: data.data
-                });
-                return message;
-            }
-            toObject() {
-                const data: {
-                    mime_type?: string;
-                    data?: Uint8Array;
-                } = {};
-                if (this.mime_type != null) {
-                    data.mime_type = this.mime_type;
-                }
-                if (this.data != null) {
-                    data.data = this.data;
-                }
-                return data;
-            }
-            serialize(): Uint8Array;
-            serialize(w: pb_1.BinaryWriter): void;
-            serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
-                const writer = w || new pb_1.BinaryWriter();
-                if (this.has_mime_type && this.mime_type.length)
-                    writer.writeString(1, this.mime_type);
-                if (this.has_data && this.data.length)
-                    writer.writeBytes(2, this.data);
-                if (!w)
-                    return writer.getResultBuffer();
-            }
-            static deserialize(bytes: Uint8Array | pb_1.BinaryReader): Attachment {
-                const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new Attachment();
-                while (reader.nextField()) {
-                    if (reader.isEndGroup())
-                        break;
-                    switch (reader.getFieldNumber()) {
-                        case 1:
-                            message.mime_type = reader.readString();
-                            break;
-                        case 2:
-                            message.data = reader.readBytes();
-                            break;
-                        default: reader.skipField();
-                    }
-                }
-                return message;
-            }
-            serializeBinary(): Uint8Array {
-                return this.serialize();
-            }
-            static deserializeBinary(bytes: Uint8Array): Attachment {
-                return Attachment.deserialize(bytes);
-            }
         }
     }
 }

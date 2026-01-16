@@ -1,36 +1,27 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { messages as messages_proto } from 'generated/messages';
+import { secret } from 'generated/secret';
 import { websocket } from 'generated/websocket';
 import { err, ok, type Result } from 'neverthrow';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { useLocation } from 'wouter';
 import { API_BASE_URL, fetchKeyBundle } from '~/lib/api';
 import { randomBytes, xeddsa_sign } from '~/lib/crypto';
-import { db } from '~/lib/db';
-import { decryptLocal, encryptLocal, recvMessage, sendMessage } from '~/lib/protocol';
+import { db, type Message } from '~/lib/db';
+import { recvMessage, sendMessage } from '~/lib/protocol';
 import { eq } from '~/lib/utils';
-
-export type MessageData = {
-  dbId: number;
-  id: Uint8Array;
-  sender: string;
-  text: string | null;
-  timestamp: number;
-  editedAt: number | null;
-  replyTo: Uint8Array | null;
-};
 
 type Identity = { handle: string; sigKey: Uint8Array };
 
 export function useChat() {
   const [, navigate] = useLocation();
-  const wsRef = useRef<(WebSocket & { msgId: number; connectAttempts: number }) | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const wsMsgIdRef = useRef(0);
 
   const [status, setStatus] = useState<Result<string, string> | null>();
   const [identity, setIdentity] = useState<Identity>(null!);
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
 
-  // WebSocket send helper
   const send = useCallback(
     async (
       msg: Omit<Exclude<ConstructorParameters<typeof websocket.ServerboundMessage>[0] & {}, any[]>, 'id'>
@@ -38,12 +29,12 @@ export function useChat() {
       const ws = wsRef.current;
       if (!ws) return websocket.Ack.Error.SERVER_ERROR;
 
-      const id = ws.msgId++;
+      const id = wsMsgIdRef.current++;
       const pb = new websocket.ServerboundMessage({
         ...msg,
         id
       } as ConstructorParameters<typeof websocket.ServerboundMessage>[0]);
-      console.log('[WS] serverbound', pb.toObject());
+      console.log('[WS] ->', pb.toObject());
       ws.send(pb.serialize());
 
       return new Promise(resolve => {
@@ -59,7 +50,6 @@ export function useChat() {
     []
   );
 
-  // Fetch key bundle helper
   const getKeyBundle = useCallback(async (handle: string) => {
     const keyBundle = await fetchKeyBundle(handle);
     if (keyBundle.isErr()) return keyBundle;
@@ -69,54 +59,95 @@ export function useChat() {
     throw new Error('KEY_MISMATCH');
   }, []);
 
-  // Handle incoming forward messages
-  const onForwardPb = useCallback(async (msg: websocket.Forward) => {
-    const payload = await recvMessage(msg);
+  const onForwardPb = useCallback(async (pb: websocket.Forward) => {
+    const { payload, session } = await recvMessage(pb);
 
-    switch (payload.sync) {
-      case 'edit_target': {
-        const targetUuid = payload.edit_target;
-        const newText = payload.text;
-        const peerMessages = await db.messages.where({ peer: msg.handle }).toArray();
+    console.log('[WS] <-', payload.toObject());
 
-        for (const storedMsg of peerMessages) {
-          const plaintext = await decryptLocal(storedMsg.ciphertext, storedMsg.nonce);
-          const msgPayload = messages_proto.MessagePayload.deserialize(plaintext);
-          if (eq(msgPayload.uuid, targetUuid)) {
-            msgPayload.text = newText;
-            msgPayload.edited_at = Date.now();
-            const { ciphertext, nonce } = await encryptLocal(msgPayload.serialize());
-            await db.messages.update(storedMsg.id, { ciphertext, nonce });
-            return;
-          }
-        }
-        return;
-      }
-
-      case 'delete_target': {
-        const targetUuid = payload.delete_target;
-        const peerMessages = await db.messages.where({ peer: msg.handle }).toArray();
-
-        for (const storedMsg of peerMessages) {
-          const plaintext = await decryptLocal(storedMsg.ciphertext, storedMsg.nonce);
-          const msgPayload = messages_proto.MessagePayload.deserialize(plaintext);
-          if (eq(msgPayload.uuid, targetUuid)) {
-            await db.messages.delete(storedMsg.id);
-            return;
-          }
-        }
-        return;
-      }
-
-      case 'none':
-      default: {
-        const { ciphertext, nonce } = await encryptLocal(payload.serialize());
+    switch (payload.type) {
+      case 'msg_new': {
+        const msg = payload.msg_new;
         await db.messages.add({
-          peer: msg.handle,
-          sender: msg.handle,
-          ciphertext,
-          nonce
+          id: msg.id,
+          peer: pb.handle,
+          sender: pb.handle,
+          text: msg.has_text ? msg.text : null,
+          reply_to: msg.has_reply_to ? msg.reply_to : null,
+          timestamp: msg.timestamp,
+          last_edited_at: null,
+          status: 'seen' // by the time you'll see the indicator, the message itself has been seen
         });
+        await db.attachments.bulkAdd(
+          msg.attachments.map(attachment => ({
+            id: attachment.id,
+            sender: pb.handle,
+            message_id: msg.id,
+            mime_type: attachment.mime_type,
+            data: attachment.data
+          }))
+        );
+        await sendMessage(
+          pb.handle,
+          new secret.Payload({
+            receipt: new secret.Receipt({
+              [pb.handle === selectedContact && document.hasFocus() ? 'seen' : 'received']: msg.id
+            })
+          }),
+          { session }
+        ).then(send);
+        break;
+      }
+
+      case 'msg_edit': {
+        const edit = payload.msg_edit;
+        await db.messages.where({ sender: pb.handle, id: edit.id }).modify(msg => {
+          msg.text = edit.has_text ? edit.text : null;
+          msg.last_edited_at = edit.timestamp;
+        });
+        await db.attachments
+          .where({ sender: pb.handle, message_id: edit.id, id: { in: edit.attachment_ids } })
+          .delete();
+        await sendMessage(
+          pb.handle,
+          new secret.Payload({
+            receipt: new secret.Receipt({
+              [pb.handle === selectedContact && document.hasFocus() ? 'seen' : 'received']: edit.id
+            })
+          }),
+          { session }
+        ).then(send);
+        break;
+      }
+
+      case 'msg_delete': {
+        const del = payload.msg_delete;
+        await db.messages.where({ sender: pb.handle, id: del.id }).delete();
+        await db.attachments.where({ sender: pb.handle, message_id: del.id }).delete();
+        break;
+      }
+
+      case 'receipt': {
+        const receipt = payload.receipt;
+        switch (receipt.type) {
+          case 'received': {
+            await db.messages.where({ peer: pb.handle, id: receipt.received }).modify(msg => {
+              msg.status = 'delivered';
+            });
+            break;
+          }
+          case 'seen': {
+            await db.messages.where({ peer: pb.handle, id: receipt.seen }).modify(msg => {
+              msg.status = 'seen';
+            });
+            break;
+          }
+        }
+        break;
+      }
+
+      default: {
+        toast.warning(`Received payload of unknown type: ${payload.type}`);
+        break;
       }
     }
   }, []);
@@ -135,8 +166,6 @@ export function useChat() {
       setStatus(ok('connecting'));
 
       const ws = new WebSocket(`${API_BASE_URL}/api/ws`) as NonNullable<typeof wsRef.current>;
-      ws.msgId = 0;
-      ws.connectAttempts = 0;
       ws.binaryType = 'arraybuffer';
       wsRef.current = ws;
 
@@ -146,29 +175,16 @@ export function useChat() {
 
       ws.onmessage = ev => {
         const msg = websocket.ClientboundMessage.deserialize(ev.data);
-        console.log('[WS] clientbound', msg.toObject());
         switch (msg.payload) {
           case 'challenge': {
-            const id = ws.msgId++;
-            const pb = new websocket.ServerboundMessage({
-              id,
+            console.log('[WS] <-', msg.toObject());
+            send({
               challenge_response: new websocket.ChallengeResponse({
                 handle: identity.handle,
                 signature: xeddsa_sign(identity.priv, msg.challenge.nonce, randomBytes(64))
               })
-            });
-            ws.send(pb.serialize());
-
-            ws.addEventListener('message', function cb(ev) {
-              const ackMsg = websocket.ClientboundMessage.deserialize(ev.data);
-              if (ackMsg.payload === 'ack' && ackMsg.ack.message_id === id) {
-                ws.removeEventListener('message', cb);
-                if (ackMsg.ack.has_error) {
-                  setStatus(err(`server rejected authentication: ${websocket.Ack.Error[ackMsg.ack.error]}`));
-                } else {
-                  setStatus(null);
-                }
-              }
+            }).then(error => {
+              setStatus(error ? err(`server rejected authentication: ${websocket.Ack.Error[error]}`) : null);
             });
             break;
           }
@@ -183,21 +199,18 @@ export function useChat() {
     })();
   }, [navigate, onForwardPb]);
 
-  // Contacts list query
   const contacts = useLiveQuery(async () => {
     const messages = await db.messages.toArray();
     const peers = Array.from(new Set(messages.map(msg => msg.peer)));
     return Promise.all(
       peers.map(async handle => {
-        const lastMessage = (await db.messages.where({ peer: handle }).last()) ?? null;
-        if (!lastMessage) return { handle, lastMessage: null };
-        const plaintext = await decryptLocal(lastMessage.ciphertext, lastMessage.nonce);
-        const payload = messages_proto.MessagePayload.deserialize(plaintext);
+        const lastMsg = (await db.messages.where({ peer: handle }).last()) ?? null;
+        if (!lastMsg) return { handle, lastMessage: null };
         return {
           handle,
           lastMessage: {
-            sender: lastMessage.sender,
-            text: payload.text ?? ''
+            sender: lastMsg.sender,
+            text: lastMsg.text ?? ''
           }
         };
       })
@@ -212,55 +225,51 @@ export function useChat() {
     return list;
   }, [contacts, selectedContact]);
 
-  // Messages query for selected contact
-  const messages = useLiveQuery(async (): Promise<MessageData[]> => {
+  const messages = useLiveQuery(async () => {
     if (!selectedContact) return [];
     const messages = await db.messages.where({ peer: selectedContact }).toArray();
-    const decrypted = await Promise.all(
-      messages.map(async ({ id: dbId, sender, ciphertext, nonce }): Promise<MessageData> => {
-        const plaintext = await decryptLocal(ciphertext, nonce);
-        const payload = messages_proto.MessagePayload.deserialize(plaintext);
-        return {
-          dbId,
-          id: payload.uuid,
-          sender,
-          text: payload.has_text ? payload.text : null,
-          timestamp: payload.timestamp,
-          editedAt: payload.has_edited_at ? payload.edited_at : null,
-          replyTo: payload.has_reply_to ? payload.reply_to : null
-        };
-      })
-    );
-    return decrypted.sort((a, b) => a.timestamp - b.timestamp);
+    return messages.sort((a, b) => a.timestamp - b.timestamp);
   }, [selectedContact]);
 
-  // Send a new message
   const sendNewMessage = useCallback(
-    async (text: string, replyTo?: Uint8Array) => {
+    async (text: string, replyTo?: Message['id']) => {
       if (!selectedContact || !text.trim()) return false;
 
-      const payload = new messages_proto.MessagePayload({
-        uuid: randomBytes(16),
-        text: text.trim(),
-        attachments: [],
-        timestamp: Date.now(),
-        ...(replyTo && { reply_to: replyTo })
+      let id = (await db.messages.where({ peer: selectedContact }).last())?.id;
+      if (id !== undefined) id += 1;
+      else id = 0;
+      console.log({ id });
+      const timestamp = Date.now();
+
+      const payload = new secret.Payload({
+        msg_new: new secret.Message({
+          id,
+          text: text.trim(),
+          attachments: [],
+          timestamp,
+          reply_to: replyTo
+        })
       });
 
-      const forward = await sendMessage(selectedContact, payload, getKeyBundle);
-      const error = await send({ forward });
+      await db.messages.add({
+        id,
+        peer: selectedContact,
+        sender: identity.handle,
+        text,
+        reply_to: replyTo ?? null,
+        timestamp,
+        last_edited_at: null,
+        status: 'pending'
+      });
 
-      if (error) {
-        console.error(error);
+      const err = await sendMessage(selectedContact, payload, { keyBundleProvider: getKeyBundle }).then(send);
+      if (err) {
+        console.error(err); // TODO: handle error
         return false;
       }
 
-      const { ciphertext, nonce } = await encryptLocal(payload.serialize());
-      await db.messages.add({
-        peer: selectedContact,
-        sender: identity.handle,
-        ciphertext,
-        nonce
+      await db.messages.where({ peer: selectedContact, sender: identity.handle, id }).modify(msg => {
+        msg.status = 'sent';
       });
 
       return true;
@@ -268,33 +277,37 @@ export function useChat() {
     [selectedContact, identity, send, getKeyBundle]
   );
 
-  // Edit a message
   const editMessage = useCallback(
-    async (msg: MessageData, newText: string) => {
+    async (msg: Message, newText: string) => {
       if (!selectedContact || !newText.trim()) return false;
 
-      const storedMsg = await db.messages.get(msg.dbId);
-      if (!storedMsg) return false;
+      const timestamp = Date.now();
 
-      const plaintext = await decryptLocal(storedMsg.ciphertext, storedMsg.nonce);
-      const payload = messages_proto.MessagePayload.deserialize(plaintext);
-      payload.text = newText.trim();
-      payload.edited_at = Date.now();
-
-      const { ciphertext, nonce } = await encryptLocal(payload.serialize());
-      await db.messages.update(msg.dbId, { ciphertext, nonce });
-
-      // Send sync message
-      const syncPayload = new messages_proto.MessagePayload({
-        uuid: randomBytes(16),
-        timestamp: Date.now(),
-        attachments: [],
-        edit_target: msg.id,
-        text: newText.trim()
+      const conditions = { peer: selectedContact, sender: identity.handle, id: msg.id };
+      await db.messages.where(conditions).modify(msg => {
+        msg.text = newText.trim();
+        msg.last_edited_at = timestamp;
+        msg.status = 'pending';
       });
 
-      const forward = await sendMessage(selectedContact, syncPayload, getKeyBundle);
-      await send({ forward });
+      const payload = new secret.Payload({
+        msg_edit: new secret.MsgEdit({
+          id: msg.id,
+          timestamp,
+          attachment_ids: [],
+          text: newText
+        })
+      });
+
+      const err = await sendMessage(selectedContact, payload, { keyBundleProvider: getKeyBundle }).then(send);
+      if (err) {
+        console.error(err); // TODO: handle error
+        return false;
+      }
+
+      await db.messages.where(conditions).modify(msg => {
+        msg.status = 'sent';
+      });
 
       return true;
     },
@@ -303,21 +316,22 @@ export function useChat() {
 
   // Delete a message
   const deleteMessage = useCallback(
-    async (msg: MessageData) => {
+    async (msg: Message) => {
       if (!selectedContact) return false;
 
-      await db.messages.delete(msg.dbId);
-
-      // Send sync message
-      const syncPayload = new messages_proto.MessagePayload({
-        uuid: randomBytes(16),
-        timestamp: Date.now(),
-        attachments: [],
-        delete_target: msg.id
+      const payload = new secret.Payload({
+        msg_delete: new secret.MsgDelete({
+          id: msg.id
+        })
       });
 
-      const forward = await sendMessage(selectedContact, syncPayload, getKeyBundle);
-      await send({ forward });
+      const err = await sendMessage(selectedContact, payload, { keyBundleProvider: getKeyBundle }).then(send);
+      if (err) {
+        console.error(err); // TODO: handle error
+        return false;
+      }
+
+      await db.messages.where({ peer: selectedContact, sender: identity.handle, id: msg.id }).delete();
 
       return true;
     },
@@ -331,7 +345,7 @@ export function useChat() {
     setSelectedContact,
     contactsList,
     messages,
-    sendNewMessage,
+    sendMessage: sendNewMessage,
     editMessage,
     deleteMessage
   };
