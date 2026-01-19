@@ -36,6 +36,7 @@
         "@types/google-protobuf": "^3.15.12",
         "@types/react": "^19.2.8",
         "@types/react-dom": "^19.2.3",
+        "@types/serviceworker": "^0.0.176",
         "bun-plugin-tailwind": "^0.1.2",
         "prettier": "^3.7.4",
         "prettier-plugin-organize-imports": "^4.3.0",
@@ -236,6 +237,8 @@
     "@types/react": ["@types/react@19.2.8", "", { "dependencies": { "csstype": "^3.2.2" } }, "sha512-3MbSL37jEchWZz2p2mjntRZtPt837ij10ApxKfgmXCTuHWagYg7iA5bqPw6C8BMPfwidlvfPI/fxOc42HLhcyg=="],
 
     "@types/react-dom": ["@types/react-dom@19.2.3", "", { "peerDependencies": { "@types/react": "^19.2.0" } }, "sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ=="],
+
+    "@types/serviceworker": ["@types/serviceworker@0.0.176", "", {}, "sha512-cgoz1omSEgiyi/a3qOsDFPe5b2vQPQoRp5hPhcPozOkGIfAfmpubnIFw+Rmg+fs0YUL9caJP9qGLfvlryGA/Xw=="],
 
     "@types/statuses": ["@types/statuses@2.0.6", "", {}, "sha512-xMAgYwceFhRA2zY+XbEA7mxYbA093wdiW8Vu6gZPGWy9cmOyU9XesH1tNcEWsKFd5Vzrqx5T3D38PWx1FIIXkA=="],
 

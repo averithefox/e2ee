@@ -5,3 +5,5 @@ target/
 /data/
 __dev__/
 .cache/
+private.pem
+public.pem
