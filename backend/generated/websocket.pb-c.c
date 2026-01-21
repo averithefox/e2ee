@@ -322,6 +322,51 @@ void   websocket__ack__free_unpacked
   assert(message->base.descriptor == &websocket__ack__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
+void   websocket__low_on_keys__init
+                     (Websocket__LowOnKeys         *message)
+{
+  static const Websocket__LowOnKeys init_value = WEBSOCKET__LOW_ON_KEYS__INIT;
+  *message = init_value;
+}
+size_t websocket__low_on_keys__get_packed_size
+                     (const Websocket__LowOnKeys *message)
+{
+  assert(message->base.descriptor == &websocket__low_on_keys__descriptor);
+  return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
+}
+size_t websocket__low_on_keys__pack
+                     (const Websocket__LowOnKeys *message,
+                      uint8_t       *out)
+{
+  assert(message->base.descriptor == &websocket__low_on_keys__descriptor);
+  return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
+}
+size_t websocket__low_on_keys__pack_to_buffer
+                     (const Websocket__LowOnKeys *message,
+                      ProtobufCBuffer *buffer)
+{
+  assert(message->base.descriptor == &websocket__low_on_keys__descriptor);
+  return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
+}
+Websocket__LowOnKeys *
+       websocket__low_on_keys__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data)
+{
+  return (Websocket__LowOnKeys *)
+     protobuf_c_message_unpack (&websocket__low_on_keys__descriptor,
+                                allocator, len, data);
+}
+void   websocket__low_on_keys__free_unpacked
+                     (Websocket__LowOnKeys *message,
+                      ProtobufCAllocator *allocator)
+{
+  if(!message)
+    return;
+  assert(message->base.descriptor == &websocket__low_on_keys__descriptor);
+  protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
+}
 void   websocket__clientbound_message__init
                      (Websocket__ClientboundMessage         *message)
 {
@@ -868,7 +913,25 @@ const ProtobufCMessageDescriptor websocket__ack__descriptor =
   (ProtobufCMessageInit) websocket__ack__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor websocket__clientbound_message__field_descriptors[3] =
+#define websocket__low_on_keys__field_descriptors NULL
+#define websocket__low_on_keys__field_indices_by_name NULL
+#define websocket__low_on_keys__number_ranges NULL
+const ProtobufCMessageDescriptor websocket__low_on_keys__descriptor =
+{
+  PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
+  "websocket.LowOnKeys",
+  "LowOnKeys",
+  "Websocket__LowOnKeys",
+  "websocket",
+  sizeof(Websocket__LowOnKeys),
+  0,
+  websocket__low_on_keys__field_descriptors,
+  websocket__low_on_keys__field_indices_by_name,
+  0,  websocket__low_on_keys__number_ranges,
+  (ProtobufCMessageInit) websocket__low_on_keys__init,
+  NULL,NULL,NULL    /* reserved[123] */
+};
+static const ProtobufCFieldDescriptor websocket__clientbound_message__field_descriptors[4] =
 {
   {
     "challenge",
@@ -906,16 +969,29 @@ static const ProtobufCFieldDescriptor websocket__clientbound_message__field_desc
     PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "low_on_keys",
+    4,
+    PROTOBUF_C_LABEL_OPTIONAL,
+    PROTOBUF_C_TYPE_MESSAGE,
+    offsetof(Websocket__ClientboundMessage, payload_case),
+    offsetof(Websocket__ClientboundMessage, low_on_keys),
+    &websocket__low_on_keys__descriptor,
+    NULL,
+    PROTOBUF_C_FIELD_FLAG_ONEOF,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned websocket__clientbound_message__field_indices_by_name[] = {
   2,   /* field[2] = ack */
   0,   /* field[0] = challenge */
   1,   /* field[1] = forward */
+  3,   /* field[3] = low_on_keys */
 };
 static const ProtobufCIntRange websocket__clientbound_message__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 3 }
+  { 0, 4 }
 };
 const ProtobufCMessageDescriptor websocket__clientbound_message__descriptor =
 {
@@ -925,7 +1001,7 @@ const ProtobufCMessageDescriptor websocket__clientbound_message__descriptor =
   "Websocket__ClientboundMessage",
   "websocket",
   sizeof(Websocket__ClientboundMessage),
-  3,
+  4,
   websocket__clientbound_message__field_descriptors,
   websocket__clientbound_message__field_indices_by_name,
   1,  websocket__clientbound_message__number_ranges,

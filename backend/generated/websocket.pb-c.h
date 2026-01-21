@@ -22,6 +22,7 @@ typedef struct Websocket__EncryptedMessage Websocket__EncryptedMessage;
 typedef struct Websocket__PQXDHInit Websocket__PQXDHInit;
 typedef struct Websocket__Forward Websocket__Forward;
 typedef struct Websocket__Ack Websocket__Ack;
+typedef struct Websocket__LowOnKeys Websocket__LowOnKeys;
 typedef struct Websocket__ClientboundMessage Websocket__ClientboundMessage;
 typedef struct Websocket__ServerboundMessage Websocket__ServerboundMessage;
 
@@ -163,11 +164,21 @@ struct  Websocket__Ack
 , 0, 0, WEBSOCKET__ACK__ERROR__UNAUTHENTICATED }
 
 
+struct  Websocket__LowOnKeys
+{
+  ProtobufCMessage base;
+};
+#define WEBSOCKET__LOW_ON_KEYS__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&websocket__low_on_keys__descriptor) \
+ }
+
+
 typedef enum {
   WEBSOCKET__CLIENTBOUND_MESSAGE__PAYLOAD__NOT_SET = 0,
   WEBSOCKET__CLIENTBOUND_MESSAGE__PAYLOAD_CHALLENGE = 1,
   WEBSOCKET__CLIENTBOUND_MESSAGE__PAYLOAD_FORWARD = 2,
-  WEBSOCKET__CLIENTBOUND_MESSAGE__PAYLOAD_ACK = 3
+  WEBSOCKET__CLIENTBOUND_MESSAGE__PAYLOAD_ACK = 3,
+  WEBSOCKET__CLIENTBOUND_MESSAGE__PAYLOAD_LOW_ON_KEYS = 4
     PROTOBUF_C__FORCE_ENUM_TO_BE_INT_SIZE(WEBSOCKET__CLIENTBOUND_MESSAGE__PAYLOAD__CASE)
 } Websocket__ClientboundMessage__PayloadCase;
 
@@ -179,6 +190,7 @@ struct  Websocket__ClientboundMessage
     Websocket__Ack *ack;
     Websocket__Challenge *challenge;
     Websocket__Forward *forward;
+    Websocket__LowOnKeys *low_on_keys;
   };
 };
 #define WEBSOCKET__CLIENTBOUND_MESSAGE__INIT \
@@ -341,6 +353,25 @@ Websocket__Ack *
 void   websocket__ack__free_unpacked
                      (Websocket__Ack *message,
                       ProtobufCAllocator *allocator);
+/* Websocket__LowOnKeys methods */
+void   websocket__low_on_keys__init
+                     (Websocket__LowOnKeys         *message);
+size_t websocket__low_on_keys__get_packed_size
+                     (const Websocket__LowOnKeys   *message);
+size_t websocket__low_on_keys__pack
+                     (const Websocket__LowOnKeys   *message,
+                      uint8_t             *out);
+size_t websocket__low_on_keys__pack_to_buffer
+                     (const Websocket__LowOnKeys   *message,
+                      ProtobufCBuffer     *buffer);
+Websocket__LowOnKeys *
+       websocket__low_on_keys__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data);
+void   websocket__low_on_keys__free_unpacked
+                     (Websocket__LowOnKeys *message,
+                      ProtobufCAllocator *allocator);
 /* Websocket__ClientboundMessage methods */
 void   websocket__clientbound_message__init
                      (Websocket__ClientboundMessage         *message);
@@ -402,6 +433,9 @@ typedef void (*Websocket__Forward_Closure)
 typedef void (*Websocket__Ack_Closure)
                  (const Websocket__Ack *message,
                   void *closure_data);
+typedef void (*Websocket__LowOnKeys_Closure)
+                 (const Websocket__LowOnKeys *message,
+                  void *closure_data);
 typedef void (*Websocket__ClientboundMessage_Closure)
                  (const Websocket__ClientboundMessage *message,
                   void *closure_data);
@@ -422,6 +456,7 @@ extern const ProtobufCMessageDescriptor websocket__pqxdhinit__descriptor;
 extern const ProtobufCMessageDescriptor websocket__forward__descriptor;
 extern const ProtobufCMessageDescriptor websocket__ack__descriptor;
 extern const ProtobufCEnumDescriptor    websocket__ack__error__descriptor;
+extern const ProtobufCMessageDescriptor websocket__low_on_keys__descriptor;
 extern const ProtobufCMessageDescriptor websocket__clientbound_message__descriptor;
 extern const ProtobufCMessageDescriptor websocket__serverbound_message__descriptor;
 

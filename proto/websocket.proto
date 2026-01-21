@@ -54,11 +54,14 @@ message Ack {
   optional Error error = 2;
 }
 
+message LowOnKeys {}
+
 message ClientboundMessage {
   oneof payload {
     Challenge challenge = 1;
     Forward forward = 2;
     Ack ack = 3;
+    LowOnKeys low_on_keys = 4;
   }
 }
 

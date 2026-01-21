@@ -1,15 +1,16 @@
 import { useLiveQuery } from 'dexie-react-hooks';
+import { messages as messages_proto } from 'generated/messages';
 import { secret } from 'generated/secret';
 import { websocket } from 'generated/websocket';
 import { err, ok, type Result } from 'neverthrow';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useLocation } from 'wouter';
-import { API_BASE_URL, fetchKeyBundle } from '~/lib/api';
+import { API_BASE_URL, fetchKeyBundle, patchIdentity } from '~/lib/api';
 import { randomBytes, xeddsa_sign } from '~/lib/crypto';
-import { db, type Message } from '~/lib/db';
-import { recvMessage, sendMessage } from '~/lib/protocol';
-import { eq } from '~/lib/utils';
+import { db, type Message, type PqkemPreKey } from '~/lib/db';
+import { genCurveKeyPair, genPqkemKeyPair, recvMessage, sendMessage } from '~/lib/protocol';
+import { eq, type EnhancedOmit } from '~/lib/utils';
 
 type Identity = { handle: string; sigKey: Uint8Array };
 
@@ -173,24 +174,96 @@ export function useChat() {
         setStatus(ok('authenticating'));
       };
 
-      ws.onmessage = ev => {
+      ws.onmessage = async ev => {
         const msg = websocket.ClientboundMessage.deserialize(ev.data);
         switch (msg.payload) {
           case 'challenge': {
             console.log('[WS] <-', msg.toObject());
-            send({
+            const error = await send({
               challenge_response: new websocket.ChallengeResponse({
                 handle: identity.handle,
                 signature: xeddsa_sign(identity.priv, msg.challenge.nonce, randomBytes(64))
               })
-            }).then(error => {
-              setStatus(error ? err(`server rejected authentication: ${websocket.Ack.Error[error]}`) : null);
             });
+            setStatus(error ? err(`server rejected authentication: ${websocket.Ack.Error[error]}`) : null);
+            if (!error) {
+              const lastPrekeyRotation = Math.max(
+                ...(await db.pqkem_prekeys.toArray()).map(p => (p.one_time ? 0 : p.created_at)),
+                ...(await db.prekeys.toArray()).map(p => p.created_at)
+              );
+              const now = Date.now();
+              if (now - lastPrekeyRotation > 1000 * 60 * 60 * 24 * 7) {
+                const prekey = genCurveKeyPair();
+                const pqkemPrekey = await genPqkemKeyPair();
+                const prekeyId = await db.prekeys.add({
+                  priv: prekey.secretKey,
+                  pub: prekey.publicKey,
+                  created_at: now
+                });
+                const pqkemPrekeyId = await db.pqkem_prekeys.add({
+                  priv: pqkemPrekey.secretKey,
+                  pub: pqkemPrekey.publicKey,
+                  one_time: false,
+                  created_at: now
+                } satisfies EnhancedOmit<PqkemPreKey, 'id'> as any);
+                await patchIdentity({
+                  prekey: new messages_proto.SignedPrekey({
+                    key: prekey.publicKey,
+                    id: prekeyId,
+                    sig: xeddsa_sign(identity.priv, prekey.publicKey, randomBytes(64))
+                  }),
+                  pqkem_prekey: new messages_proto.SignedPrekey({
+                    key: pqkemPrekey.publicKey,
+                    id: pqkemPrekeyId,
+                    sig: xeddsa_sign(identity.priv, pqkemPrekey.publicKey, randomBytes(64))
+                  })
+                });
+              }
+            }
             break;
           }
           case 'forward': {
             onForwardPb(msg.forward);
             break;
+          }
+          case 'low_on_keys': {
+            console.log('[WS] <-', 'LowOnKeys{}');
+
+            const one_time_pqkem_prekeys = await Promise.all(
+              Array.from({ length: 100 }, async () => {
+                const keyPair = await genPqkemKeyPair();
+                const sig = xeddsa_sign(identity.priv, keyPair.publicKey, randomBytes(64));
+                const id = await db.pqkem_prekeys.add({
+                  priv: keyPair.secretKey,
+                  pub: keyPair.publicKey,
+                  one_time: true
+                });
+                return new messages_proto.SignedPrekey({
+                  key: keyPair.publicKey,
+                  id,
+                  sig
+                });
+              })
+            );
+
+            const one_time_prekeys = await Promise.all(
+              Array.from({ length: 100 }, async () => {
+                const keyPair = genCurveKeyPair();
+                const id = await db.one_time_prekeys.add({
+                  priv: keyPair.secretKey,
+                  pub: keyPair.publicKey
+                });
+                return new messages_proto.Prekey({
+                  key: keyPair.publicKey,
+                  id
+                });
+              })
+            );
+
+            await patchIdentity({
+              one_time_pqkem_prekeys,
+              one_time_prekeys
+            });
           }
         }
       };

@@ -215,13 +215,16 @@ void handle_ws_authenticated(struct mg_connection *c) {
     goto err;
   }
 
+  // clang-format off
+  const char *sql_select = "select id,msg from queue where for=? order by created_at asc;";
+  const char *sql_delete = "delete from queue where id=?;";
+  // clang-format on
+
   int rc;
-  if ((rc = sqlite3_prepare_v3(
-           db,
-           "select id,msg from queue where for = ? order by created_at asc;",
-           -1, 0, &stmt_select, NULL)) != SQLITE_OK ||
-      (rc = sqlite3_prepare_v3(db, "delete from queue where id = ?;", -1, 0,
-                               &stmt_delete, NULL)) != SQLITE_OK) {
+  if ((rc = sqlite3_prepare_v3(db, sql_select, -1, 0, &stmt_select, NULL)) !=
+          SQLITE_OK ||
+      (rc = sqlite3_prepare_v3(db, sql_delete, -1, 0, &stmt_delete, NULL)) !=
+          SQLITE_OK) {
     fprintf(stderr, "[%s:%d] prepare failed: %d (%s)\n", __func__, __LINE__, rc,
             sqlite3_errmsg(db));
     goto err;
@@ -348,7 +351,8 @@ err:
   if (stmt_handle_by_id) sqlite3_finalize(stmt_handle_by_id);
 }
 
-struct mg_connection *find_ws_conn_by_id(struct mg_mgr *mgr, int64_t id) {
+static struct mg_connection *find_ws_conn_by_id(struct mg_mgr *mgr,
+                                                int64_t id) {
   for (struct mg_connection *c = mgr->conns; c; c = c->next) {
     if (!c->is_websocket) continue;
     struct ws_ctx *ctx = c->fn_data;
@@ -357,14 +361,14 @@ struct mg_connection *find_ws_conn_by_id(struct mg_mgr *mgr, int64_t id) {
   return NULL;
 }
 
-void ws_send_by_id(struct mg_mgr *mgr, int64_t id, const void *buf,
+bool ws_send_by_id(struct mg_mgr *mgr, int64_t id, const void *buf,
                    size_t len) {
   sqlite3_stmt *stmt = NULL;
 
   struct mg_connection *c = find_ws_conn_by_id(mgr, id);
   if (c) {
     mg_ws_send(c, buf, len, WEBSOCKET_OP_BINARY);
-    return;
+    return true;
   }
 
   int rc;
@@ -388,6 +392,8 @@ void ws_send_by_id(struct mg_mgr *mgr, int64_t id, const void *buf,
     goto err;
   }
 
+  return true;
 err:
   if (stmt) sqlite3_finalize(stmt);
+  return false;
 }

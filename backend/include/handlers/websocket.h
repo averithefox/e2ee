@@ -19,5 +19,4 @@ void handle_ws_challenge_response_pb(struct mg_connection *c,
 void handle_ws_authenticated(struct mg_connection *c);
 void handle_ws_forward_pb(struct mg_connection *c, Websocket__Forward *msg,
                           int64_t msg_id);
-struct mg_connection *find_ws_conn_by_id(struct mg_mgr *mgr, int64_t id);
-void ws_send_by_id(struct mg_mgr *mgr, int64_t id, const void *buf, size_t len);
+bool ws_send_by_id(struct mg_mgr *mgr, int64_t id, const void *buf, size_t len);

@@ -14,10 +14,11 @@ static const char *s_sql =
     "spk_sig blob not null,"
     "pqspk blob not null," // last-resort post-quantum signed prekey
     "pqspk_id integer not null,"
-    "pqspk_sig blob not null"
+    "pqspk_sig blob not null,"
+    "notified_low_prekeys integer not null default 0"
   ");"
-  "create index if not exists idx_identities_handle on identities(handle);"
   "create index if not exists idx_identities_id on identities(id);"
+  "create index if not exists idx_identities_handle on identities(handle);"
 
   "create table if not exists pqopks(" // signed one-time pqkem prekeys
     "uid integer primary key autoincrement,"
@@ -28,6 +29,7 @@ static const char *s_sql =
     "foreign key (for) references identities(id) on delete cascade"
   ");"
   "create index if not exists idx_pqopks_id on pqopks(id);"
+  "create index if not exists idx_pqopks_for on pqopks(for);"
 
   "create table if not exists opks(" // one-time prekeys
     "uid integer primary key autoincrement,"
@@ -37,6 +39,7 @@ static const char *s_sql =
     "foreign key (for) references identities(id) on delete cascade"
   ");"
   "create index if not exists idx_opks_id on opks(id);"
+  "create index if not exists idx_opks_for on opks(for);"
 
   "create table if not exists queue("
     "id integer primary key autoincrement,"

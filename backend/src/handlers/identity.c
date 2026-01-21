@@ -107,8 +107,8 @@ static void handle_identity_POST_request(struct mg_connection *c,
       "pqspk_id,"
       "pqspk_sig"
     ")values(?,?,?,?,?,?,?,?);";
-  const char *sql1 = "insert into pqopks (`for`,bytes,id,sig) values (?,?,?,?);";
-  const char *sql2 = "insert into opks (`for`,bytes,id) values (?,?,?);";
+  const char *sql1 = "insert into pqopks(for,bytes,id,sig)values(?,?,?,?);";
+  const char *sql2 = "insert into opks(for,bytes,id)values(?,?,?);";
   // clang-format on
 
   int rc;
@@ -265,11 +265,11 @@ static void handle_identity_PATCH_request(struct mg_connection *c,
   }
 
   // clang-format off
-  const char *sql_update = "update identities set spk=?, spk_id=?, spk_sig=?, pqspk=?, pqspk_id=?, pqspk_sig=? where id=?;";
-  const char *sql_update_spk_only = "update identities set spk=?, spk_id=?, spk_sig=? where id=?;";
-  const char *sql_update_pqspk_only = "update identities set pqspk=?, pqspk_id=?, pqspk_sig=? where id=?;";
-  const char *sql_insert_pqopk = "insert into pqopks (for,bytes,id,sig) values (?,?,?,?);";
-  const char *sql_insert_opk = "insert into opks (for,bytes,id) values (?,?,?);";
+  const char *sql_update = "update identities set spk=?,spk_id=?,spk_sig=?,pqspk=?,pqspk_id=?,pqspk_sig=? where id=?;";
+  const char *sql_update_spk_only = "update identities set spk=?,spk_id=?,spk_sig=? where id=?;";
+  const char *sql_update_pqspk_only = "update identities set pqspk=?,pqspk_id=?,pqspk_sig=? where id=?;";
+  const char *sql_insert_pqopk = "insert into pqopks(for,bytes,id,sig)values(?,?,?,?);";
+  const char *sql_insert_opk = "insert into opks(for,bytes,id)values(?,?,?);";
   // clang-format on
 
   int rc;
@@ -436,15 +436,45 @@ static void handle_identity_PATCH_request(struct mg_connection *c,
     ERR(500);
   }
 
-  status_code = 200;
+  mg_http_reply(c, 200, NEW_IDENTITY_REPLY_HEADERS, "");
 
+  if (pb->n_one_time_pqkem_prekeys > 0 || pb->n_one_time_prekeys > 0) {
+    sqlite3_stmt *stmt = NULL;
+
+    const char *sql =
+        "update identities set notified_low_prekeys=0 where id=?;";
+
+    if ((rc = sqlite3_prepare_v3(db, sql, -1, 0, &stmt, NULL)) != SQLITE_OK) {
+      fprintf(stderr, "[%s:%d] prepare failed: %d (%s)\n", __func__, __LINE__,
+              rc, sqlite3_errmsg(db));
+      goto notif_ack_err;
+    }
+
+    if ((rc = sqlite3_bind_int64(stmt, 1, id)) != SQLITE_OK) {
+      fprintf(stderr, "[%s:%d] bind failed: %d (%s)\n", __func__, __LINE__, rc,
+              sqlite3_errmsg(db));
+      goto notif_ack_err;
+    }
+
+    if ((rc = sqlite3_step(stmt)) != SQLITE_DONE) {
+      fprintf(stderr, "[%s:%d] step failed: %d (%s)\n", __func__, __LINE__, rc,
+              sqlite3_errmsg(db));
+      goto notif_ack_err;
+    }
+
+  notif_ack_err:
+    if (stmt) sqlite3_finalize(stmt);
+  }
+
+  goto cleanup;
 err:
+  mg_http_reply(c, status_code, NEW_IDENTITY_REPLY_HEADERS, "");
+cleanup:
   if (id_key) free(id_key);
   if (pb) messages__identity_patch__free_unpacked(pb, NULL);
   if (stmt_update) sqlite3_finalize(stmt_update);
   if (stmt_insert_pqopk) sqlite3_finalize(stmt_insert_pqopk);
   if (stmt_insert_opk) sqlite3_finalize(stmt_insert_opk);
-  mg_http_reply(c, status_code, NEW_IDENTITY_REPLY_HEADERS, "");
 }
 
 static void handle_identity_DELETE_request(struct mg_connection *c,

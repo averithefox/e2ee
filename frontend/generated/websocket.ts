@@ -769,20 +769,68 @@ export namespace websocket {
             INVALID_MESSAGE = 4
         }
     }
+    export class LowOnKeys extends pb_1.Message {
+        #one_of_decls: number[][] = [];
+        constructor(data?: any[] | {}) {
+            super();
+            pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
+            if (!Array.isArray(data) && typeof data == "object") { }
+        }
+        static fromObject(data: {}): LowOnKeys {
+            const message = new LowOnKeys({});
+            return message;
+        }
+        toObject() {
+            const data: {} = {};
+            return data;
+        }
+        serialize(): Uint8Array;
+        serialize(w: pb_1.BinaryWriter): void;
+        serialize(w?: pb_1.BinaryWriter): Uint8Array | void {
+            const writer = w || new pb_1.BinaryWriter();
+            if (!w)
+                return writer.getResultBuffer();
+        }
+        static deserialize(bytes: Uint8Array | pb_1.BinaryReader): LowOnKeys {
+            const reader = bytes instanceof pb_1.BinaryReader ? bytes : new pb_1.BinaryReader(bytes), message = new LowOnKeys();
+            while (reader.nextField()) {
+                if (reader.isEndGroup())
+                    break;
+                switch (reader.getFieldNumber()) {
+                    default: reader.skipField();
+                }
+            }
+            return message;
+        }
+        serializeBinary(): Uint8Array {
+            return this.serialize();
+        }
+        static deserializeBinary(bytes: Uint8Array): LowOnKeys {
+            return LowOnKeys.deserialize(bytes);
+        }
+    }
     export class ClientboundMessage extends pb_1.Message {
-        #one_of_decls: number[][] = [[1, 2, 3]];
+        #one_of_decls: number[][] = [[1, 2, 3, 4]];
         constructor(data?: any[] | ({} & (({
             challenge?: Challenge;
             forward?: never;
             ack?: never;
+            low_on_keys?: never;
         } | {
             challenge?: never;
             forward?: Forward;
             ack?: never;
+            low_on_keys?: never;
         } | {
             challenge?: never;
             forward?: never;
             ack?: Ack;
+            low_on_keys?: never;
+        } | {
+            challenge?: never;
+            forward?: never;
+            ack?: never;
+            low_on_keys?: LowOnKeys;
         })))) {
             super();
             pb_1.Message.initialize(this, Array.isArray(data) ? data : [], 0, -1, [], this.#one_of_decls);
@@ -795,6 +843,9 @@ export namespace websocket {
                 }
                 if ("ack" in data && data.ack != undefined) {
                     this.ack = data.ack;
+                }
+                if ("low_on_keys" in data && data.low_on_keys != undefined) {
+                    this.low_on_keys = data.low_on_keys;
                 }
             }
         }
@@ -825,21 +876,32 @@ export namespace websocket {
         get has_ack() {
             return pb_1.Message.getField(this, 3) != null;
         }
+        get low_on_keys() {
+            return pb_1.Message.getWrapperField(this, LowOnKeys, 4) as LowOnKeys;
+        }
+        set low_on_keys(value: LowOnKeys) {
+            pb_1.Message.setOneofWrapperField(this, 4, this.#one_of_decls[0], value);
+        }
+        get has_low_on_keys() {
+            return pb_1.Message.getField(this, 4) != null;
+        }
         get payload() {
             const cases: {
-                [index: number]: "none" | "challenge" | "forward" | "ack";
+                [index: number]: "none" | "challenge" | "forward" | "ack" | "low_on_keys";
             } = {
                 0: "none",
                 1: "challenge",
                 2: "forward",
-                3: "ack"
+                3: "ack",
+                4: "low_on_keys"
             };
-            return cases[pb_1.Message.computeOneofCase(this, [1, 2, 3])];
+            return cases[pb_1.Message.computeOneofCase(this, [1, 2, 3, 4])];
         }
         static fromObject(data: {
             challenge?: ReturnType<typeof Challenge.prototype.toObject>;
             forward?: ReturnType<typeof Forward.prototype.toObject>;
             ack?: ReturnType<typeof Ack.prototype.toObject>;
+            low_on_keys?: ReturnType<typeof LowOnKeys.prototype.toObject>;
         }): ClientboundMessage {
             const message = new ClientboundMessage({});
             if (data.challenge != null) {
@@ -851,6 +913,9 @@ export namespace websocket {
             if (data.ack != null) {
                 message.ack = Ack.fromObject(data.ack);
             }
+            if (data.low_on_keys != null) {
+                message.low_on_keys = LowOnKeys.fromObject(data.low_on_keys);
+            }
             return message;
         }
         toObject() {
@@ -858,6 +923,7 @@ export namespace websocket {
                 challenge?: ReturnType<typeof Challenge.prototype.toObject>;
                 forward?: ReturnType<typeof Forward.prototype.toObject>;
                 ack?: ReturnType<typeof Ack.prototype.toObject>;
+                low_on_keys?: ReturnType<typeof LowOnKeys.prototype.toObject>;
             } = {};
             if (this.challenge != null) {
                 data.challenge = this.challenge.toObject();
@@ -867,6 +933,9 @@ export namespace websocket {
             }
             if (this.ack != null) {
                 data.ack = this.ack.toObject();
+            }
+            if (this.low_on_keys != null) {
+                data.low_on_keys = this.low_on_keys.toObject();
             }
             return data;
         }
@@ -880,6 +949,8 @@ export namespace websocket {
                 writer.writeMessage(2, this.forward, () => this.forward.serialize(writer));
             if (this.has_ack)
                 writer.writeMessage(3, this.ack, () => this.ack.serialize(writer));
+            if (this.has_low_on_keys)
+                writer.writeMessage(4, this.low_on_keys, () => this.low_on_keys.serialize(writer));
             if (!w)
                 return writer.getResultBuffer();
         }
@@ -897,6 +968,9 @@ export namespace websocket {
                         break;
                     case 3:
                         reader.readMessage(message.ack, () => message.ack = Ack.deserialize(reader));
+                        break;
+                    case 4:
+                        reader.readMessage(message.low_on_keys, () => message.low_on_keys = LowOnKeys.deserialize(reader));
                         break;
                     default: reader.skipField();
                 }

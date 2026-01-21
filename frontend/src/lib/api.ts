@@ -1,9 +1,9 @@
 import { messages } from 'generated/messages';
 import { err, ok, Result } from 'neverthrow';
 import { randomBytes, xeddsa_sign } from './crypto';
-import { db } from './db';
-import { genKeys } from './protocol';
-import { b64Encode } from './utils';
+import { db, type PqkemPreKey } from './db';
+import { genInitKeyBundle } from './protocol';
+import { b64Encode, type EnhancedOmit } from './utils';
 
 export const API_BASE_URL = process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : window.location.origin;
 
@@ -47,20 +47,28 @@ export async function fetch(url: string, { method = 'GET', ...rest }: RequestIni
 type LimitedRequestInit = Omit<RequestInit, 'body' | 'method'>;
 
 export async function registerIdentity(handle: string) {
-  const keys = await genKeys();
+  const keys = await genInitKeyBundle();
 
-  const prekeyId = await db.prekeys.add({ priv: keys.prekey.privateKey, pub: keys.prekey.publicKey });
+  const created_at = Date.now();
+  const prekeyId = await db.prekeys.add({ priv: keys.prekey.secretKey, pub: keys.prekey.publicKey, created_at });
   const pqkemPrekeyId = await db.pqkem_prekeys.add({
-    priv: keys.pqkemPrekey.privateKey,
+    priv: keys.pqkemPrekey.secretKey,
     pub: keys.pqkemPrekey.publicKey,
-    oneTime: false
-  });
+    one_time: false,
+    created_at
+  } satisfies EnhancedOmit<PqkemPreKey, 'id'> as any);
   const oneTimePqkemPrekeyIds = await db.pqkem_prekeys.bulkAdd(
-    keys.oneTimePqkemPrekeys.map(pqopk => ({ priv: pqopk.privateKey, pub: pqopk.publicKey, oneTime: true })),
+    keys.oneTimePqkemPrekeys.map(
+      pqopk =>
+        ({ priv: pqopk.secretKey, pub: pqopk.publicKey, one_time: true }) satisfies EnhancedOmit<
+          PqkemPreKey,
+          'id'
+        > as any
+    ),
     { allKeys: true }
   );
   const oneTimePrekeyIds = await db.one_time_prekeys.bulkAdd(
-    keys.oneTimePrekeys.map(opk => ({ priv: opk.privateKey, pub: opk.publicKey })),
+    keys.oneTimePrekeys.map(opk => ({ priv: opk.secretKey, pub: opk.publicKey, created_at })),
     { allKeys: true }
   );
 
@@ -70,19 +78,19 @@ export async function registerIdentity(handle: string) {
     prekey: new messages.SignedPrekey({
       key: keys.prekey.publicKey,
       id: prekeyId,
-      sig: xeddsa_sign(keys.idKey.privateKey, keys.prekey.publicKey, randomBytes(64))
+      sig: xeddsa_sign(keys.idKey.secretKey, keys.prekey.publicKey, randomBytes(64))
     }),
     pqkem_prekey: new messages.SignedPrekey({
       key: keys.pqkemPrekey.publicKey,
       id: pqkemPrekeyId,
-      sig: xeddsa_sign(keys.idKey.privateKey, keys.pqkemPrekey.publicKey, randomBytes(64))
+      sig: xeddsa_sign(keys.idKey.secretKey, keys.pqkemPrekey.publicKey, randomBytes(64))
     }),
     one_time_pqkem_prekeys: keys.oneTimePqkemPrekeys.map(
       (pqopk, i) =>
         new messages.SignedPrekey({
           key: pqopk.publicKey,
           id: oneTimePqkemPrekeyIds[i]!,
-          sig: xeddsa_sign(keys.idKey.privateKey, pqopk.publicKey, randomBytes(64))
+          sig: xeddsa_sign(keys.idKey.secretKey, pqopk.publicKey, randomBytes(64))
         })
     ),
     one_time_prekeys: keys.oneTimePrekeys.map(
@@ -102,10 +110,31 @@ export async function registerIdentity(handle: string) {
   });
 
   if (!res.ok) {
+    await db.prekeys.delete(prekeyId);
+    await db.pqkem_prekeys.bulkDelete([pqkemPrekeyId, ...oneTimePqkemPrekeyIds]);
+    await db.one_time_prekeys.bulkDelete(oneTimePrekeyIds);
     throw new Error(res.statusText);
   }
 
-  await db.identity.add({ handle, priv: keys.idKey.privateKey, pub: keys.idKey.publicKey });
+  await db.identity.add({ handle, priv: keys.idKey.secretKey, pub: keys.idKey.publicKey });
+}
+
+export async function patchIdentity(
+  patch: Partial<Exclude<ConstructorParameters<typeof messages.IdentityPatch>[0] & {}, any[]>>
+) {
+  const pb = new messages.IdentityPatch({
+    ...patch,
+    one_time_pqkem_prekeys: patch.one_time_pqkem_prekeys ?? [],
+    one_time_prekeys: patch.one_time_prekeys ?? []
+  });
+  const buf = pb.serialize();
+  const res = await window.fetch(`${API_BASE_URL}/api/identity`, {
+    method: 'PATCH',
+    body: buf
+  });
+  if (!res.ok) {
+    throw new Error(res.statusText);
+  }
 }
 
 export async function fetchKeyBundle(

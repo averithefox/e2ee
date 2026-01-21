@@ -5,11 +5,14 @@ export interface IdKey {
   pub: Uint8Array;
 }
 
-export interface Key {
+export interface PreKey {
   id: number;
   priv: Uint8Array;
   pub: Uint8Array;
+  created_at: number;
 }
+
+export type PqkemPreKey = (PreKey & { one_time: false }) | (Omit<PreKey, 'created_at'> & { one_time: true });
 
 export interface Identity {
   id: number;
@@ -48,7 +51,6 @@ export interface Message {
   reply_to: Message['id'] | null;
   timestamp: number;
   last_edited_at: number | null;
-  // "pending" at first, "sent" after receiving ack from the server, "delivered" after receiving appropriate ack from the peer
   status: 'pending' | 'sent' | 'delivered' | 'seen';
 }
 
@@ -63,9 +65,9 @@ export interface Attachment {
 export const db = new Dexie('theDb') as Dexie & {
   identity: EntityTable<Identity, 'id'>;
   identity_keys: EntityTable<IdKey, 'for'>;
-  prekeys: EntityTable<Key, 'id'>;
-  pqkem_prekeys: EntityTable<Key & { oneTime: boolean }, 'id'>;
-  one_time_prekeys: EntityTable<Key, 'id'>;
+  prekeys: EntityTable<PreKey, 'id'>;
+  pqkem_prekeys: EntityTable<PqkemPreKey, 'id'>;
+  one_time_prekeys: EntityTable<Omit<PreKey, 'created_at'>, 'id'>;
   sessions: EntityTable<Session, 'id'>;
   skipped_message_keys: EntityTable<SkippedMessageKeys, 'id'>;
   messages: EntityTable<Message>;

@@ -8,7 +8,7 @@ import { websocket } from 'generated/websocket';
 import sodium from 'libsodium-wrappers';
 import { MlKem1024 } from 'mlkem';
 import { fetchKeyBundle } from './api';
-import { randomBytes, xeddsa_verify } from './crypto';
+import { xeddsa_verify } from './crypto';
 import { db, type Session } from './db';
 import { b64Encode, concat, type ResultPromise } from './utils';
 
@@ -16,48 +16,31 @@ const PQXDH_INFO = new TextEncoder().encode('me.averi.chat_CURVE25519_SHA-512_ML
 const KDF_RK_INFO = new TextEncoder().encode('me.averi.chat_DoubleRatchet_RootKey');
 const MAX_SKIP = 1000;
 
-export function x25519KeyPair() {
-  const privateKey = randomBytes(32);
-  const publicKey = x25519.getPublicKey(privateKey);
-  return { privateKey, publicKey };
+export const genCurveKeyPair = x25519.keygen;
+
+const kem = new MlKem1024();
+export async function genPqkemKeyPair() {
+  const [publicKey, secretKey] = await kem.generateKeyPair();
+  return { publicKey, secretKey };
 }
 
-export async function genKeys() {
-  const kem = new MlKem1024();
-
-  const idKey = x25519KeyPair();
-  const prekey = x25519KeyPair();
-  const [pqkemPrekeyPub, pqkemPrekeyPriv] = await kem.generateKeyPair();
-  const oneTimePqkemPrekeys = await Promise.all(
-    Array.from({ length: 100 }, async () => {
-      const [publicKey, privateKey] = await kem.generateKeyPair();
-      return { publicKey, privateKey };
-    })
-  );
-  const oneTimePrekeys = Array.from({ length: 100 }, () => x25519KeyPair());
+export async function genInitKeyBundle() {
+  const idKey = genCurveKeyPair();
+  const prekey = genCurveKeyPair();
+  const pqkemPrekey = await genPqkemKeyPair();
+  const oneTimePqkemPrekeys = await Promise.all(Array.from({ length: 100 }, genPqkemKeyPair));
+  const oneTimePrekeys = Array.from({ length: 100 }, genCurveKeyPair);
 
   return {
     idKey,
-    prekey: {
-      publicKey: prekey.publicKey,
-      privateKey: prekey.privateKey
-    },
-    pqkemPrekey: {
-      publicKey: pqkemPrekeyPub,
-      privateKey: pqkemPrekeyPriv
-    },
-    oneTimePqkemPrekeys: oneTimePqkemPrekeys.map(({ publicKey, privateKey }) => ({
-      publicKey,
-      privateKey
-    })),
-    oneTimePrekeys: oneTimePrekeys.map(({ publicKey, privateKey }) => ({
-      publicKey,
-      privateKey
-    }))
+    prekey,
+    pqkemPrekey,
+    oneTimePqkemPrekeys,
+    oneTimePrekeys
   };
 }
 
-export type KeyBundle = Exclude<Awaited<ReturnType<typeof genKeys>>, 'nextId'>;
+export type KeyBundle = Exclude<Awaited<ReturnType<typeof genInitKeyBundle>>, 'nextId'>;
 
 export const DH = x25519.getSharedSecret;
 
@@ -123,8 +106,8 @@ function ratchetStep(session: Session, header: websocket.MessageHeader) {
   session.Nr = 0;
   session.DHr = header.dh_public_key;
   [session.RK, session.CKr] = KDF_RK(session.RK, DH(session.DHs_priv, session.DHr));
-  const DHs = x25519KeyPair();
-  [session.DHs_priv, session.DHs_pub] = [DHs.privateKey, DHs.publicKey];
+  const DHs = genCurveKeyPair();
+  [session.DHs_priv, session.DHs_pub] = [DHs.secretKey, DHs.publicKey];
   [session.RK, session.CKs] = KDF_RK(session.RK, DH(session.DHs_priv, session.DHr));
 }
 
@@ -206,24 +189,22 @@ export async function sendMessage(
       throw new Error('signature verification failed');
     }
 
-    const kem = new MlKem1024();
-
-    const EK = x25519KeyPair();
+    const EK = genCurveKeyPair();
 
     const [CT, SS] = await kem.encap(bundle.pqkem_prekey.key);
 
     const DH1 = DH(identity.priv, bundle.prekey.key);
-    const DH2 = DH(EK.privateKey, bundle.id_key);
-    const DH3 = DH(EK.privateKey, bundle.prekey.key);
-    const DH4 = bundle.has_one_time_prekey ? DH(EK.privateKey, bundle.one_time_prekey.key) : new Uint8Array(0);
+    const DH2 = DH(EK.secretKey, bundle.id_key);
+    const DH3 = DH(EK.secretKey, bundle.prekey.key);
+    const DH4 = bundle.has_one_time_prekey ? DH(EK.secretKey, bundle.one_time_prekey.key) : new Uint8Array(0);
     const SK = KDF_PQXDH(concat(DH1, DH2, DH3, DH4, SS));
 
-    const DHs = x25519KeyPair();
+    const DHs = genCurveKeyPair();
 
     session = {
       peer: to,
       RK: SK,
-      DHs_priv: DHs.privateKey,
+      DHs_priv: DHs.secretKey,
       DHs_pub: DHs.publicKey,
       DHr: bundle.prekey.key,
       CKs: null,
@@ -297,7 +278,7 @@ export async function recvMessage(pb: websocket.Forward) {
     const PQPK = await db.pqkem_prekeys.get(PQPKId);
     if (!PQPK) {
       throw new Error(`unable to find a pqkem prekey with id ${PQPKId}`);
-    } else if (PQPK.oneTime) {
+    } else if (PQPK.one_time) {
       await db.pqkem_prekeys.delete(PQPK.id);
     }
 
@@ -305,8 +286,6 @@ export async function recvMessage(pb: websocket.Forward) {
     if (OPKId && !OPK) {
       throw new Error(`unable to find a one-time prekey with id ${OPKId}`);
     }
-
-    const kem = new MlKem1024();
 
     const SS = await kem.decap(msg.pqkem_ciphertext, PQPK.priv);
 

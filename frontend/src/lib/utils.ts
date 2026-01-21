@@ -5,6 +5,12 @@ import { twMerge } from 'tailwind-merge';
 export type ResultPromise<T, E> = Promise<Result<T, E>>;
 export type Nullish<T> = T | null | undefined;
 
+export type EnhancedOmit<T, K extends keyof T> = string extends keyof T
+  ? T
+  : T extends any
+    ? Pick<T, Exclude<keyof T, K>>
+    : never;
+
 export function concat(...arrays: Uint8Array[]) {
   const total = arrays.reduce((sum, arr) => sum + arr.length, 0);
   const result = new Uint8Array(total);
@@ -54,7 +60,8 @@ export function validateHandle(handle: string): string | null {
   if (handle.length < HANDLE_MIN_LENGTH) return `Handle must be at least ${HANDLE_MIN_LENGTH} characters`;
   if (handle.length > HANDLE_MAX_LENGTH) return `Handle must be at most ${HANDLE_MAX_LENGTH} characters`;
   if (handle !== handle.toLowerCase()) return 'Handle must be lowercase';
-  if (!HANDLE_REGEX.test(handle)) return 'Handle must start with a letter and contain only letters, numbers, and underscores';
+  if (!HANDLE_REGEX.test(handle))
+    return 'Handle must start with a letter and contain only letters, numbers, and underscores';
   if (handle.includes('__')) return 'Handle cannot contain consecutive underscores';
   if (handle.endsWith('_')) return 'Handle cannot end with an underscore';
   return null;
